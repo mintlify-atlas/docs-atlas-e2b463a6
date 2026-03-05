@@ -1,0 +1,131 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Laravel Livewire Tables",
+  "projectDescription": "Full-featured reactive data tables for Laravel with sorting, filtering, pagination, bulk actions, and CSV export",
+  "theme": "palm",
+  "primaryColor": "#7b86aa",
+  "lightColor": "#22273a",
+  "darkColor": "#cacfdf",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/tables",
+              "concepts/columns",
+              "concepts/filters",
+              "concepts/sorting-search",
+              "concepts/pagination"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/bulk-actions",
+              "features/export",
+              "features/events-hooks",
+              "features/toolbar-slots",
+              "features/joins"
+            ]
+          },
+          {
+            "group": "Theming",
+            "pages": [
+              "theming/themes",
+              "theming/dark-mode",
+              "theming/customization"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Columns",
+            "pages": [
+              "api/columns/text",
+              "api/columns/boolean",
+              "api/columns/date",
+              "api/columns/image",
+              "api/columns/action",
+              "api/columns/blade"
+            ]
+          },
+          {
+            "group": "Filters",
+            "pages": [
+              "api/filters/text",
+              "api/filters/select",
+              "api/filters/boolean",
+              "api/filters/number",
+              "api/filters/number-range",
+              "api/filters/date",
+              "api/filters/date-range",
+              "api/filters/multi-date"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "api/configuration",
+              "api/methods"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Reactive data tables with Livewire 3 & 4",
+    "Search, sort, filter, and pagination",
+    "Bulk actions with select-all support",
+    "CSV export functionality",
+    "Multiple column types (Text, Boolean, Date, Image, Action, Blade)",
+    "Multiple filter types with dependent filter support",
+    "Tailwind CSS, Bootstrap 5, and Bootstrap 4 themes",
+    "Dark mode support",
+    "Lifecycle hooks and event system",
+    "Toolbar customization slots",
+    "Join support for related tables",
+    "State persistence across sessions"
+  ],
+  "publicApiSurface": [
+    "DataTableComponent",
+    "TextColumn",
+    "BooleanColumn",
+    "DateColumn",
+    "ImageColumn",
+    "ActionColumn",
+    "BladeColumn",
+    "TextFilter",
+    "SelectFilter",
+    "BooleanFilter",
+    "NumberFilter",
+    "NumberRangeFilter",
+    "DateFilter",
+    "DateRangeFilter",
+    "MultiDateFilter",
+    "configure()",
+    "query()",
+    "columns()",
+    "filters()",
+    "bulkActions()",
+    "getSelectedIds()",
+    "setDefaultPerPage()",
+    "setSearchDebounce()",
+    "setDefaultSortDirection()",
+    "setEmptyMessage()"
+  ]
+}
