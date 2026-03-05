@@ -1,0 +1,498 @@
+---
+title: Customization
+description: Customize colors, CSS custom properties, and visual styling across all tables
+---
+
+Laravel Livewire Tables uses CSS custom properties (CSS variables) for colors, allowing you to customize the entire visual theme from your configuration file.
+
+## Primary Color Palette
+
+The `colors` array in `config/livewire-tables.php` defines the primary color used across all interactive elements:
+
+```php
+'colors' => [
+    '50'  => '#f0fdfa',
+    '100' => '#ccfbf1',
+    '200' => '#99f6e4',
+    '400' => '#2dd4bf',
+    '500' => '#14b8a6',
+    '600' => '#0d9488',
+    '700' => '#0f766e',
+],
+```
+
+These colors are applied to:
+
+- **Buttons** — Filter, column visibility, and bulk action buttons
+- **Checkboxes** — Row selection and column toggles
+- **Active states** — Sorted columns, active filters, selected rows
+- **Badges** — Filter chips and counts
+- **Focus rings** — Keyboard navigation indicators
+- **Hover effects** — Interactive element highlights
+- **Pagination** — Active page indicator
+
+<Info>
+  Color customization works identically for both Tailwind and Bootstrap themes. You don't need separate configurations.
+</Info>
+
+## How It Works
+
+The color values are injected as CSS custom properties in the `:root` scope:
+
+```css
+:root {
+    --lt-primary-50:  #f0fdfa;
+    --lt-primary-100: #ccfbf1;
+    --lt-primary-200: #99f6e4;
+    --lt-primary-400: #2dd4bf;
+    --lt-primary-500: #14b8a6;
+    --lt-primary-600: #0d9488;
+    --lt-primary-700: #0f766e;
+}
+```
+
+These variables are then used throughout the generated CSS:
+
+```css
+/* Button styles */
+.lt-btn-primary {
+    background-color: var(--lt-primary-600) !important;
+    border-color: var(--lt-primary-600) !important;
+}
+
+/* Checkbox styles */
+.lt-checkbox:checked {
+    background-color: var(--lt-primary-600) !important;
+}
+
+/* Hover effects */
+.lt-hover-theme:hover {
+    background-color: var(--lt-primary-50) !important;
+    color: var(--lt-primary-700) !important;
+}
+```
+
+Source: `resources/views/components/styles.blade.php:2-9`
+
+## Color Presets
+
+The package includes six professionally designed color presets that you can use as-is or as starting points:
+
+<Tabs>
+  <Tab title="Teal (Default)">
+    ```php
+    'colors' => [
+        '50'  => '#f0fdfa',
+        '100' => '#ccfbf1',
+        '200' => '#99f6e4',
+        '400' => '#2dd4bf',
+        '500' => '#14b8a6',
+        '600' => '#0d9488',
+        '700' => '#0f766e',
+    ],
+    ```
+    
+    Fresh, modern teal/cyan that works well in both light and dark modes.
+  </Tab>
+  
+  <Tab title="Indigo">
+    ```php
+    'colors' => [
+        '50'  => '#eef2ff',
+        '100' => '#e0e7ff',
+        '200' => '#c7d2fe',
+        '400' => '#818cf8',
+        '500' => '#6366f1',
+        '600' => '#4f46e5',
+        '700' => '#4338ca',
+    ],
+    ```
+    
+    Classic indigo blue that conveys trust and professionalism.
+  </Tab>
+  
+  <Tab title="Sky">
+    ```php
+    'colors' => [
+        '50'  => '#f0f9ff',
+        '100' => '#e0f2fe',
+        '200' => '#bae6fd',
+        '400' => '#38bdf8',
+        '500' => '#0ea5e9',
+        '600' => '#0284c7',
+        '700' => '#0369a1',
+    ],
+    ```
+    
+    Bright sky blue with excellent contrast and visibility.
+  </Tab>
+  
+  <Tab title="Purple">
+    ```php
+    'colors' => [
+        '50'  => '#faf5ff',
+        '100' => '#f3e8ff',
+        '200' => '#e9d5ff',
+        '400' => '#c084fc',
+        '500' => '#a855f7',
+        '600' => '#9333ea',
+        '700' => '#7e22ce',
+    ],
+    ```
+    
+    Rich purple that adds personality and creativity.
+  </Tab>
+  
+  <Tab title="Rose">
+    ```php
+    'colors' => [
+        '50'  => '#fff1f2',
+        '100' => '#ffe4e6',
+        '200' => '#fecdd3',
+        '400' => '#fb7185',
+        '500' => '#f43f5e',
+        '600' => '#e11d48',
+        '700' => '#be123c',
+    ],
+    ```
+    
+    Vibrant rose/pink that stands out and draws attention.
+  </Tab>
+  
+  <Tab title="Amber">
+    ```php
+    'colors' => [
+        '50'  => '#fffbeb',
+        '100' => '#fef3c7',
+        '200' => '#fde68a',
+        '400' => '#fbbf24',
+        '500' => '#f59e0b',
+        '600' => '#d97706',
+        '700' => '#b45309',
+    ],
+    ```
+    
+    Warm amber/orange that conveys energy and optimism.
+  </Tab>
+</Tabs>
+
+<Tip>
+  These presets are listed in the config file comments for easy copy-paste. See `config/livewire-tables.php:30-36`
+</Tip>
+
+## Custom Colors
+
+You can use any hex color values for your palette. Here's how to create a custom color scheme:
+
+<Steps>
+  <Step title="Choose Your Base Color">
+    Start with your brand's primary color. For example, a custom green: `#10b981`
+  </Step>
+  
+  <Step title="Generate Color Shades">
+    Create lighter and darker variations. You can:
+    - Use [Tailwind's color palette](https://tailwindcss.com/docs/customizing-colors) as reference
+    - Use [ColorBox](https://colorbox.io/) to generate harmonious shades
+    - Use [Palette Generator](https://palette.saas-ui.dev/) for quick generation
+  </Step>
+  
+  <Step title="Update Configuration">
+    ```php
+    'colors' => [
+        '50'  => '#ecfdf5',  // Lightest - backgrounds
+        '100' => '#d1fae5',  // Very light - hover states
+        '200' => '#a7f3d0',  // Light - badges, chips
+        '400' => '#4ade80',  // Medium light - borders
+        '500' => '#10b981',  // Base color - focus rings
+        '600' => '#059669',  // Medium dark - primary actions
+        '700' => '#047857',  // Darkest - text, active states
+    ],
+    ```
+  </Step>
+  
+  <Step title="Test in Light and Dark Mode">
+    Make sure your colors have sufficient contrast in both modes:
+    
+    ```bash
+    php artisan config:clear
+    ```
+    
+    Then view your tables in both light and dark themes.
+  </Step>
+</Steps>
+
+## Color Shade Usage Guide
+
+| Shade | Purpose | Examples |
+|-------|---------|----------|
+| **50** | Subtle backgrounds, hover states | Button hover, selection bar background |
+| **100** | Light backgrounds, secondary hover | Filter button active state, table hover |
+| **200** | Chips, badges, borders (light mode) | Active filter chips, ring colors |
+| **400** | Medium contrast borders | Filter button active border, hover borders |
+| **500** | Focus rings, icons | Form input focus, sort icons |
+| **600** | Primary actions, checkboxes | Buttons, selected checkboxes, badges |
+| **700** | Text, strong emphasis | Active text, sorted column headers |
+
+<Info>
+  Shades 300, 800, and 900 are not used by the package. You only need to define seven specific shades.
+</Info>
+
+## CSS Custom Properties Reference
+
+All CSS custom properties available for direct override:
+
+### Primary Color Variables
+
+```css
+:root {
+    /* Color palette */
+    --lt-primary-50:  #f0fdfa;
+    --lt-primary-100: #ccfbf1;
+    --lt-primary-200: #99f6e4;
+    --lt-primary-400: #2dd4bf;
+    --lt-primary-500: #14b8a6;
+    --lt-primary-600: #0d9488;
+    --lt-primary-700: #0f766e;
+    
+    /* Semantic colors (light mode) */
+    --lt-bg: #ffffff;
+    --lt-bg-card: #ffffff;
+    --lt-bg-subtle: #f9fafb;
+    --lt-border: #e5e7eb;
+    --lt-border-light: #f3f4f6;
+    --lt-text: #111827;
+    --lt-text-muted: #6b7280;
+}
+```
+
+Source: `resources/views/components/styles.blade.php:2-18`
+
+### Overriding in Your CSS
+
+You can override any CSS custom property in your application's stylesheet:
+
+<CodeGroup>
+
+```css Global Override
+/* resources/css/app.css */
+:root {
+    /* Override specific shades */
+    --lt-primary-600: #dc2626;  /* Use red for primary actions */
+    --lt-primary-700: #b91c1c;
+    
+    /* Override semantic colors */
+    --lt-bg-card: #fafafa;
+    --lt-border: #d4d4d8;
+}
+```
+
+```css Scoped Override
+/* Only affect tables inside a specific container */
+#admin-panel {
+    --lt-primary-600: #ea580c;  /* Orange for admin section */
+    --lt-primary-700: #c2410c;
+}
+```
+
+```css Dark Mode Override
+/* Customize dark mode colors */
+.dark {
+    --lt-bg-card: #09090b;       /* Darker cards */
+    --lt-border: #27272a;        /* Stronger borders */
+    --lt-primary-600: #818cf8;   /* Lighter primary in dark mode */
+}
+```
+
+</CodeGroup>
+
+<Warning>
+  CSS custom property overrides must be loaded **after** the Livewire Tables styles to take effect.
+</Warning>
+
+## Utility Classes
+
+The package generates utility classes that use the configured color palette:
+
+### Background Classes
+
+- `.lt-bg-50` — Lightest background
+- `.lt-bg-600` — Primary button background
+- `.lt-bg-700` — Dark primary background
+- `.lt-bg-50-muted` — 70% opacity light background
+
+### Text Classes
+
+- `.lt-text-400` — Medium contrast text
+- `.lt-text-500` — Base primary text
+- `.lt-text-600` — Strong primary text
+- `.lt-text-700` — Strongest primary text
+
+### Border Classes
+
+- `.lt-border-100` — Light border
+- `.lt-border-400` — Medium border
+- `.lt-border-600` — Strong border
+
+### Hover Classes
+
+- `.lt-hover-bg-100` — Light hover background
+- `.lt-hover-bg-700` — Dark hover background
+- `.lt-hover-text-600` — Hover text color
+- `.lt-hover-theme` — Combined hover effect (background + text + border)
+
+### Button Classes
+
+- `.lt-btn-primary` — Solid primary button
+- `.lt-btn-outline-primary` — Outlined primary button
+- `.lt-btn-neutral` — Neutral gray button
+- `.lt-btn-neutral-active` — Active neutral button
+
+### Badge Classes
+
+- `.lt-badge-primary` — Solid badge
+- `.lt-badge-primary-soft` — Soft/muted badge
+
+### Checkbox Classes
+
+- `.lt-checkbox` — Styled checkbox using primary color
+
+Source: `resources/views/components/styles.blade.php:20-76`
+
+## Per-Component Color Overrides
+
+For one-off customizations on specific tables, use inline styles or scoped CSS:
+
+<CodeGroup>
+
+```blade Inline Styles
+<div style="--lt-primary-600: #8b5cf6; --lt-primary-700: #7c3aed;">
+    <livewire:users-table />
+</div>
+```
+
+```php Component Class
+namespace App\Livewire\Tables;
+
+use Livewire\Tables\Livewire\DataTableComponent;
+
+class SpecialTable extends DataTableComponent
+{
+    public function render()
+    {
+        return view('livewire.tables.special-table')
+            ->with('customColor', '#8b5cf6');  // Violet
+    }
+}
+```
+
+```blade Component View
+<div style="--lt-primary-600: {{ $customColor }};">
+    <x-livewire-tables::table :$component :$columns :$rows />
+</div>
+```
+
+</CodeGroup>
+
+## Framework-Specific Styling
+
+Depending on your chosen theme, different CSS classes are applied:
+
+### Tailwind Theme
+
+Uses utility classes + CSS custom properties:
+
+```html
+<button class="rounded-lg lt-bg-600 text-white px-3 py-2">
+  <!-- lt-bg-600 uses var(--lt-primary-600) -->
+</button>
+```
+
+### Bootstrap Theme
+
+Uses Bootstrap classes + CSS custom properties:
+
+```html
+<button class="btn lt-btn-primary d-flex align-items-center gap-1">
+  <!-- lt-btn-primary uses var(--lt-primary-600) -->
+</button>
+```
+
+<Info>
+  The same `colors` configuration works for both themes. The package handles the framework-specific implementation.
+</Info>
+
+## Accessibility Considerations
+
+When customizing colors, ensure you maintain sufficient contrast ratios:
+
+<Steps>
+  <Step title="Check Contrast Ratios">
+    Use a tool like [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/):
+    
+    - **Shade 600 on white** should have ≥4.5:1 ratio (WCAG AA)
+    - **Shade 700 text on shade 50 background** should have ≥4.5:1 ratio
+    - **White text on shade 600** should have ≥4.5:1 ratio
+  </Step>
+  
+  <Step title="Test with Color Blindness Simulators">
+    Use browser DevTools or online tools to simulate different types of color blindness
+  </Step>
+  
+  <Step title="Don't Rely on Color Alone">
+    The package uses icons, text labels, and other visual cues in addition to color
+  </Step>
+</Steps>
+
+<Warning>
+  Very light colors (yellow, lime) may not have sufficient contrast as primary colors. Consider using darker variants.
+</Warning>
+
+## Performance Notes
+
+CSS custom properties have excellent performance characteristics:
+
+- **No JavaScript** — All color changes are pure CSS
+- **No Repaints** — Changing a custom property is very efficient
+- **Small Bundle Size** — ~12KB of generated CSS (minified)
+- **Cached** — Styles are cached by the browser
+
+## Troubleshooting
+
+### Colors not updating
+
+1. **Clear config cache**: `php artisan config:clear`
+2. **Clear view cache**: `php artisan view:clear`
+3. **Hard refresh browser**: Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac)
+4. **Check syntax**: Ensure hex colors include the `#` prefix
+
+### Colors look wrong in dark mode
+
+The primary color should work in both light and dark modes. If it doesn't:
+
+1. **Use medium shades (500-700)** for dark mode primary actions
+2. **Avoid very light shades** on dark backgrounds
+3. **Test both modes** when choosing colors
+
+### CSS not being applied
+
+Make sure your custom CSS is loaded after the Livewire Tables styles:
+
+```blade
+<!-- In your layout -->
+<head>
+    @livewireStyles
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <!-- ☝️ Your custom CSS should come after Livewire styles -->
+</head>
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Themes" icon="swatchbook" href="/theming/themes">
+    Learn about the theme system and create custom themes
+  </Card>
+  <Card title="Dark Mode" icon="moon" href="/theming/dark-mode">
+    Configure dark mode with custom color palettes
+  </Card>
+</CardGroup>

@@ -1,0 +1,228 @@
+---
+title: TextFilter
+description: Free text input filter with LIKE search functionality
+---
+
+## Overview
+
+The `TextFilter` class provides a text input filter that applies a `LIKE` query with wildcards to search the specified database field.
+
+## Creating a TextFilter
+
+<ParamField path="make" type="static method" required>
+  Creates a new TextFilter instance.
+  
+  <ParamField path="field" type="string" required>
+    The database column name to filter on
+  </ParamField>
+  
+  ```php
+  TextFilter::make('email')
+  ```
+</ParamField>
+
+## Available Methods
+
+### label
+
+<ParamField path="label" type="method">
+  Sets the display label for the filter.
+  
+  <ParamField path="label" type="string" required>
+    The label text to display
+  </ParamField>
+  
+  ```php
+  TextFilter::make('email')
+      ->label('Email Address')
+  ```
+</ParamField>
+
+### placeholder
+
+<ParamField path="placeholder" type="method">
+  Sets placeholder text for the input field.
+  
+  <ParamField path="text" type="string" required>
+    The placeholder text
+  </ParamField>
+  
+  ```php
+  TextFilter::make('name')
+      ->placeholder('Search by name...')
+  ```
+</ParamField>
+
+### key
+
+<ParamField path="key" type="method">
+  Overrides the internal key used for the filter (defaults to field name with dots replaced by underscores).
+  
+  <ParamField path="key" type="string" required>
+    Custom key identifier
+  </ParamField>
+  
+  ```php
+  TextFilter::make('user.name')
+      ->key('user_name_filter')
+  ```
+</ParamField>
+
+### default
+
+<ParamField path="default" type="method">
+  Sets a default value for the filter.
+  
+  <ParamField path="value" type="mixed" required>
+    The default value
+  </ParamField>
+  
+  ```php
+  TextFilter::make('search')
+      ->default('laravel')
+  ```
+</ParamField>
+
+### initialValue
+
+<ParamField path="initialValue" type="method">
+  Sets an initial value that is pre-applied when the table first loads.
+  
+  <ParamField path="value" type="mixed" required>
+    The initial value to apply
+  </ParamField>
+  
+  ```php
+  TextFilter::make('category')
+      ->initialValue('electronics')
+  ```
+</ParamField>
+
+### filter
+
+<ParamField path="filter" type="method">
+  Provides a custom query callback to override the default filter behavior.
+  
+  <ParamField path="callback" type="Closure" required>
+    A closure that receives `Builder $query` and `mixed $value` and returns the modified Builder
+  </ParamField>
+  
+  ```php
+  TextFilter::make('full_name')
+      ->label('Name')
+      ->filter(function (Builder $query, mixed $value) {
+          return $query->where('first_name', 'LIKE', "%{$value}%")
+                       ->orWhere('last_name', 'LIKE', "%{$value}%");
+      })
+  ```
+</ParamField>
+
+### groupClass
+
+<ParamField path="groupClass" type="method">
+  Sets a CSS class for the filter wrapper element.
+  
+  <ParamField path="class" type="string" required>
+    CSS class name(s)
+  </ParamField>
+  
+  ```php
+  TextFilter::make('email')
+      ->groupClass('col-md-4')
+  ```
+</ParamField>
+
+### labelClass
+
+<ParamField path="labelClass" type="method">
+  Sets a CSS class for the label element.
+  
+  <ParamField path="class" type="string" required>
+    CSS class name(s)
+  </ParamField>
+  
+  ```php
+  TextFilter::make('email')
+      ->labelClass('font-bold text-gray-700')
+  ```
+</ParamField>
+
+### inputClass
+
+<ParamField path="inputClass" type="method">
+  Sets a CSS class for the input element.
+  
+  <ParamField path="class" type="string" required>
+    CSS class name(s)
+  </ParamField>
+  
+  ```php
+  TextFilter::make('email')
+      ->inputClass('form-control-lg')
+  ```
+</ParamField>
+
+## Default Behavior
+
+By default, `TextFilter` applies a `LIKE` query with wildcards on both sides:
+
+```php
+$query->where($fieldName, 'LIKE', "%{$value}%")
+```
+
+This performs a case-insensitive substring search on the specified field.
+
+## Complete Example
+
+```php
+use Livewire\Tables\Filters\TextFilter;
+use Illuminate\Database\Eloquent\Builder;
+
+public function filters(): array
+{
+    return [
+        TextFilter::make('email')
+            ->label('Email Address')
+            ->placeholder('Filter by email...')
+            ->inputClass('form-control'),
+
+        TextFilter::make('description')
+            ->label('Description')
+            ->placeholder('Search description...')
+            ->filter(function (Builder $query, mixed $value) {
+                return $query->where('description', 'LIKE', "%{$value}%")
+                             ->orWhere('notes', 'LIKE', "%{$value}%");
+            }),
+    ];
+}
+```
+
+## Usage in Table Component
+
+```php
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Livewire\Tables\Filters\TextFilter;
+use Livewire\Tables\Livewire\DataTableComponent;
+
+class UsersTable extends DataTableComponent
+{
+    public function query(): Builder
+    {
+        return User::query();
+    }
+
+    public function filters(): array
+    {
+        return [
+            TextFilter::make('name')
+                ->label('Name')
+                ->placeholder('Search by name...'),
+
+            TextFilter::make('email')
+                ->label('Email')
+                ->placeholder('Search by email...'),
+        ];
+    }
+}
+```

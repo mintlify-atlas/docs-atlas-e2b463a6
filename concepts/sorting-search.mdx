@@ -1,0 +1,477 @@
+---
+title: 'Sorting & Search'
+description: 'Configure search functionality and multi-column sorting'
+---
+
+## Search Functionality
+
+Laravel Livewire Tables provides global search that queries across all searchable columns.
+
+### Enable Search
+
+Mark columns as searchable:
+
+```php
+use Livewire\Tables\Columns\TextColumn;
+
+public function columns(): array
+{
+    return [
+        TextColumn::make('name')->sortable()->searchable(),
+        TextColumn::make('email')->sortable()->searchable(),
+        TextColumn::make('description')->searchable(),
+    ];
+}
+```
+
+The global search input will query all three columns using `LIKE` queries combined with `OR`.
+
+### Search Debounce
+
+Control the delay before search executes:
+
+```php
+public function configure(): void
+{
+    $this->setSearchDebounce(500); // 500ms delay
+}
+```
+
+Valid range: 0-5000 milliseconds. Default: 300ms.
+
+<Info>
+  Higher debounce values reduce server load by preventing searches on every keystroke.
+</Info>
+
+### Search on Specific Fields
+
+For joined tables or aliases, specify the actual database column:
+
+```php
+public function query(): Builder
+{
+    return Product::query()
+        ->join('brands', 'products.brand_id', '=', 'brands.id')
+        ->select('products.*', 'brands.name as brand_name');
+}
+
+public function columns(): array
+{
+    return [
+        TextColumn::make('name')->searchable(),
+        TextColumn::make('brand_name')
+            ->label('Brand')
+            ->searchable('brands.name'), // Search on actual column
+    ];
+}
+```
+
+### Custom Search Logic
+
+Use a closure for complex search requirements:
+
+```php
+use Livewire\Tables\Columns\BladeColumn;
+use Illuminate\Database\Eloquent\Builder;
+
+BladeColumn::make()
+    ->label('Full Name')
+    ->searchable(fn(Builder $query, string $search) => $query
+        ->orWhere('first_name', 'LIKE', "%{$search}%")
+        ->orWhere('last_name', 'LIKE', "%{$search}%")
+    )
+    ->render(fn($row) => $row->first_name . ' ' . $row->last_name);
+```
+
+<Note>
+  Custom search closures are only supported on `BladeColumn`. Use `searchable('field.name')` for other column types.
+</Note>
+
+### Search State
+
+Access the current search query in your component:
+
+```php
+public string $search = '';
+
+public function updatedSearch(): void
+{
+    $this->deselectAll();
+    $this->resetPage();
+    $this->dispatchFiltersChanged();
+}
+```
+
+Clear search programmatically:
+
+```php
+$this->clearSearch();
+```
+
+Check if search is active:
+
+```php
+if ($this->hasSearch()) {
+    // Search is active
+}
+```
+
+## Sorting
+
+Laravel Livewire Tables supports single and multi-column sorting.
+
+### Enable Sorting
+
+Mark columns as sortable:
+
+```php
+public function columns(): array
+{
+    return [
+        TextColumn::make('name')->sortable(),
+        TextColumn::make('email')->sortable(),
+        TextColumn::make('created_at')->sortable(),
+    ];
+}
+```
+
+Users can click column headers to sort.
+
+### Single-Column Sorting
+
+Click a sortable column header:
+
+<Steps>
+  <Step title="First Click">
+    Sorts by the default direction (ascending by default).
+  </Step>
+  
+  <Step title="Second Click">
+    Reverses the sort direction.
+  </Step>
+  
+  <Step title="Third Click">
+    Clears the sort.
+  </Step>
+</Steps>
+
+### Multi-Column Sorting
+
+Hold **Shift** and click additional column headers to sort by multiple columns:
+
+```
+1. Click "Name" → sorts by name asc
+2. Shift+click "Created" → sorts by name asc, created_at asc
+3. Shift+click "Email" → sorts by name asc, created_at asc, email asc
+```
+
+Each sorted column displays:
+- Sort direction indicator (↑ or ↓)
+- Sort order number when multiple columns are sorted
+
+<Info>
+  Multi-column sorting respects the order in which columns were clicked.
+</Info>
+
+### Default Sort Direction
+
+Set the initial sort direction:
+
+```php
+public function configure(): void
+{
+    $this->setDefaultSortDirection('desc');
+}
+```
+
+Options: `'asc'` or `'desc'`. Default: `'asc'`.
+
+This affects the first click on any sortable column.
+
+### Sort State
+
+The component tracks sort state in `$sortFields`:
+
+```php
+public array $sortFields = [];
+// ['name' => 'asc', 'created_at' => 'desc']
+```
+
+Programmatic sorting:
+
+```php
+$this->sortBy('name'); // Toggle sort on 'name'
+$this->clearSort(); // Clear all sorting
+$this->clearSortField('name'); // Clear specific field
+```
+
+Check sort state:
+
+```php
+if ($this->isSortedBy('name')) {
+    $direction = $this->getSortDirection('name'); // 'asc' or 'desc'
+    $order = $this->getSortOrder('name'); // 1, 2, 3, etc.
+}
+```
+
+### Sort Chips
+
+Active sorts are displayed as chips in the toolbar:
+
+<img src="/images/sort-chips.png" alt="Sort chips" />
+
+Users can remove individual sorts by clicking the ❌ button.
+
+### Sorting on Joined Tables
+
+Sort by joined columns using dot notation:
+
+```php
+public function query(): Builder
+{
+    return Order::query()
+        ->join('brands', 'orders.brand_id', '=', 'brands.id')
+        ->select(
+            'orders.*',
+            'brands.name as brands_name'
+        );
+}
+
+public function columns(): array
+{
+    return [
+        TextColumn::make('orders.id')->label('#')->sortable(),
+        TextColumn::make('customer_name')->sortable(),
+        TextColumn::make('brands.name')->label('Brand')->sortable(),
+    ];
+}
+```
+
+<Warning>
+  When sorting on joined columns, ensure the column is included in the SELECT clause or use the full `table.column` syntax.
+</Warning>
+
+## The Search Pipeline
+
+Understanding how search works internally:
+
+<Steps>
+  <Step title="User Input">
+    User types in the search box.
+  </Step>
+  
+  <Step title="Debounce">
+    After the configured delay, Livewire updates `$search`.
+  </Step>
+  
+  <Step title="SearchStep">
+    The `SearchStep` applies `LIKE` queries to all searchable columns:
+    ```php
+    $query->where(function(Builder $q) use ($search) {
+        foreach ($searchableColumns as $column) {
+            $q->orWhere($column->field(), 'LIKE', "%{$search}%");
+        }
+    });
+    ```
+  </Step>
+  
+  <Step title="Results">
+    The filtered query is passed to the next pipeline step.
+  </Step>
+</Steps>
+
+## The Sort Pipeline
+
+Understanding how sorting works internally:
+
+<Steps>
+  <Step title="User Click">
+    User clicks a sortable column header (with or without Shift).
+  </Step>
+  
+  <Step title="Update State">
+    The `sortBy()` method updates `$sortFields`:
+    ```php
+    public function sortBy(string $field): void
+    {
+        if (array_key_exists($field, $this->sortFields)) {
+            if ($this->sortFields[$field] === 'asc') {
+                $this->sortFields[$field] = 'desc';
+            } else {
+                unset($this->sortFields[$field]);
+            }
+        } else {
+            $this->sortFields[$field] = $this->defaultSortDirection ?? 'asc';
+        }
+        $this->resetPage();
+    }
+    ```
+  </Step>
+  
+  <Step title="SortStep">
+    The `SortStep` applies `ORDER BY` clauses in order:
+    ```php
+    foreach ($sortFields as $field => $direction) {
+        $query->orderBy($field, $direction);
+    }
+    ```
+  </Step>
+  
+  <Step title="Results">
+    The sorted query is passed to pagination.
+  </Step>
+</Steps>
+
+## Complete Example
+
+```php app/Livewire/OrdersTable.php
+<?php
+
+namespace App\Livewire;
+
+use App\Models\Order;
+use Illuminate\Database\Eloquent\Builder;
+use Livewire\Tables\Columns\TextColumn;
+use Livewire\Tables\Columns\DateColumn;
+use Livewire\Tables\Livewire\DataTableComponent;
+
+class OrdersTable extends DataTableComponent
+{
+    protected string $tableKey = 'orders';
+
+    public function configure(): void
+    {
+        $this->setDefaultPerPage(25);
+        $this->setSearchDebounce(300);
+        $this->setDefaultSortDirection('desc');
+        $this->setEmptyMessage('No orders found.');
+    }
+
+    public function query(): Builder
+    {
+        return Order::query()
+            ->join('brands', 'orders.brand_id', '=', 'brands.id')
+            ->select(
+                'orders.*',
+                'orders.id as orders_id',
+                'brands.name as brands_name',
+                'brands.country as brands_country'
+            );
+    }
+
+    public function columns(): array
+    {
+        return [
+            TextColumn::make('orders.id')
+                ->label('#')
+                ->sortable(),
+
+            TextColumn::make('customer_name')
+                ->label('Customer')
+                ->sortable()
+                ->searchable(),
+
+            TextColumn::make('customer_email')
+                ->label('Email')
+                ->sortable()
+                ->searchable(),
+
+            TextColumn::make('product_name')
+                ->label('Product')
+                ->sortable()
+                ->searchable(),
+
+            TextColumn::make('brands.name')
+                ->label('Brand')
+                ->sortable()
+                ->searchable(),
+
+            TextColumn::make('brands.country')
+                ->label('Country')
+                ->sortable()
+                ->searchable(),
+
+            TextColumn::make('quantity')
+                ->label('Qty')
+                ->sortable()
+                ->headerClass('text-right')
+                ->cellClass('text-right'),
+
+            TextColumn::make('unit_price')
+                ->label('Unit Price')
+                ->sortable()
+                ->headerClass('text-right')
+                ->cellClass('text-right font-semibold')
+                ->format(fn($value) => '$' . number_format($value, 2)),
+
+            TextColumn::make('status')
+                ->label('Status')
+                ->sortable(),
+
+            DateColumn::make('ordered_at')
+                ->label('Date')
+                ->sortable()
+                ->format('M d, Y'),
+        ];
+    }
+}
+```
+
+## Performance Tips
+
+<AccordionGroup>
+  <Accordion title="Index Searchable Columns">
+    Add database indexes to columns that are frequently searched:
+    ```php
+    Schema::table('products', function (Blueprint $table) {
+        $table->index('name');
+        $table->index('email');
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Use Full-Text Search">
+    For large datasets, consider MySQL full-text indexes:
+    ```php
+    Schema::table('products', function (Blueprint $table) {
+        $table->fullText(['name', 'description']);
+    });
+    ```
+    Then customize search:
+    ```php
+    TextFilter::make('search')
+        ->filter(fn(Builder $query, mixed $value) => 
+            $query->whereFullText(['name', 'description'], $value)
+        );
+    ```
+  </Accordion>
+
+  <Accordion title="Limit Searchable Columns">
+    Only mark essential columns as searchable to reduce query complexity:
+    ```php
+    // Good: 3-5 searchable columns
+    TextColumn::make('name')->searchable(),
+    TextColumn::make('email')->searchable(),
+    
+    // Avoid: 10+ searchable columns
+    ```
+  </Accordion>
+
+  <Accordion title="Increase Debounce for Large Tables">
+    Higher debounce reduces query load:
+    ```php
+    $this->setSearchDebounce(500); // or even 750ms
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Pagination" icon="list-ol" href="/concepts/pagination">
+    Customize pagination behavior
+  </Card>
+  <Card title="Filters" icon="filter" href="/concepts/filters">
+    Add filters to narrow down your data
+  </Card>
+</CardGroup>

@@ -1,0 +1,330 @@
+---
+title: "Toolbar Slots"
+description: "Inject custom content into six strategic positions around the table"
+---
+
+Toolbar slots allow you to inject custom content into the table's toolbar area and around the table itself. Each slot can return a Blade view, HTML string, or null.
+
+## Available Slots
+
+| Method | Position |
+|--------|----------|
+| `toolbarLeftPrepend()` | Before search input (left side) |
+| `toolbarLeftAppend()` | After search & filter buttons (left side) |
+| `toolbarRightPrepend()` | Before bulk/columns/per-page (right side) |
+| `toolbarRightAppend()` | After per-page selector (right side) |
+| `beforeTable()` | After toolbar, before data rows |
+| `afterTable()` | After data rows, before pagination |
+
+<Info>
+Each method returns `View|string|null`. Return `null` (default) to render nothing.
+</Info>
+
+## Basic Usage
+
+Override the slot methods in your table component:
+
+```php
+use IlluminateContractsViewView;
+
+class UsersTable extends DataTableComponent
+{
+    public function toolbarLeftPrepend(): View|string|null
+    {
+        return '<button wire:click="createUser" class="lt-btn-primary">+ New User</button>';
+    }
+
+    public function toolbarRightAppend(): View|string|null
+    {
+        return view('tables.partials.toolbar-actions');
+    }
+
+    public function beforeTable(): View|string|null
+    {
+        return '<div class="p-3 bg-yellow-50 text-yellow-800 rounded">⚠ 5 users pending approval</div>';
+    }
+
+    public function afterTable(): View|string|null
+    {
+        return view('tables.partials.summary', [
+            'total' => $this->getSelectedCount($this->totalRows ?? 0),
+        ]);
+    }
+}
+```
+
+## Toolbar Left Slots
+
+The left side of the toolbar contains the search input and filter button:
+
+### toolbarLeftPrepend()
+
+Appears before the search input:
+
+```php
+public function toolbarLeftPrepend(): View|string|null
+{
+    return '<button wire:click="createUser" class="btn btn-primary">+ New User</button>';
+}
+```
+
+### toolbarLeftAppend()
+
+Appears after the search input and filter button:
+
+```php
+public function toolbarLeftAppend(): View|string|null
+{
+    return '<button wire:click="refresh" class="btn btn-secondary">🔄 Refresh</button>';
+}
+```
+
+## Toolbar Right Slots
+
+The right side of the toolbar contains bulk actions, column visibility, and per-page selector:
+
+### toolbarRightPrepend()
+
+Appears before bulk actions dropdown:
+
+```php
+public function toolbarRightPrepend(): View|string|null
+{
+    $count = User::where('active', false)->count();
+    return "<span class='text-red-600 text-sm font-medium'>{$count} inactive</span>";
+}
+```
+
+### toolbarRightAppend()
+
+Appears after the per-page selector:
+
+```php
+public function toolbarRightAppend(): View|string|null
+{
+    return '<button wire:click="exportAll" class="btn btn-success">Export All</button>';
+}
+```
+
+## Table Boundary Slots
+
+Inject content immediately before or after the table data rows:
+
+### beforeTable()
+
+Appears after the toolbar but before the table rows:
+
+```php
+public function beforeTable(): View|string|null
+{
+    if (! $this->hasActiveFilters()) {
+        return null;
+    }
+
+    return '<div class="p-2 text-sm text-gray-500">Filters are active. Showing filtered results.</div>';
+}
+```
+
+### afterTable()
+
+Appears after the table rows but before pagination:
+
+```php
+public function afterTable(): View|string|null
+{
+    return view('tables.partials.summary', [
+        'total' => $this->totalRows ?? 0,
+    ]);
+}
+```
+
+## Returning Blade Views
+
+For complex content, return a Blade view:
+
+```php
+public function toolbarLeftPrepend(): View|string|null
+{
+    return view('tables.partials.create-button', [
+        'label' => 'New User',
+        'action' => 'createUser',
+    ]);
+}
+```
+
+```blade resources/views/tables/partials/create-button.blade.php
+<button wire:click="{{ $action }}" class="lt-btn-primary">
+    {{ $label }}
+</button>
+```
+
+## Conditional Slots
+
+Return `null` to hide a slot based on conditions:
+
+```php
+public function beforeTable(): View|string|null
+{
+    if (! $this->hasActiveFilters()) {
+        return null;
+    }
+
+    return '<div class="p-2 text-sm text-gray-500">Filters are active.</div>';
+}
+```
+
+## Accessing Table State
+
+Slots have access to all table properties and methods:
+
+```php
+public function toolbarRightPrepend(): View|string|null
+{
+    $count = $this->getSelectedCount($this->totalRows ?? 0);
+    
+    if ($count === 0) {
+        return null;
+    }
+    
+    return "<span class='badge'>{$count} selected</span>";
+}
+```
+
+## Complete Examples
+
+<CodeGroup>
+```php Alert Banner
+public function beforeTable(): View|string|null
+{
+    $pendingCount = User::where('status', 'pending')->count();
+    
+    if ($pendingCount === 0) {
+        return null;
+    }
+    
+    return "
+        <div class='bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4'>
+            <div class='flex items-center gap-2'>
+                <span class='text-yellow-800 font-semibold'>
+                    ⚠ {$pendingCount} users pending approval
+                </span>
+                <button wire:click='reviewPending' class='btn-sm btn-warning'>
+                    Review
+                </button>
+            </div>
+        </div>
+    ";
+}
+```
+
+```php Action Buttons
+public function toolbarLeftPrepend(): View|string|null
+{
+    return view('tables.toolbar-actions', [
+        'canCreate' => auth()->user()->can('create', User::class),
+        'canImport' => auth()->user()->can('import', User::class),
+    ]);
+}
+```
+
+```php Summary Stats
+public function afterTable(): View|string|null
+{
+    $query = $this->query();
+    
+    return "
+        <div class='bg-gray-50 p-4 mt-4 rounded'>
+            <div class='grid grid-cols-3 gap-4'>
+                <div>
+                    <span class='text-sm text-gray-600'>Total Users</span>
+                    <div class='text-2xl font-bold'>".$query->count()."</div>
+                </div>
+                <div>
+                    <span class='text-sm text-gray-600'>Active</span>
+                    <div class='text-2xl font-bold text-green-600'>".$query->where('active', true)->count()."</div>
+                </div>
+                <div>
+                    <span class='text-sm text-gray-600'>Inactive</span>
+                    <div class='text-2xl font-bold text-red-600'>".$query->where('active', false)->count()."</div>
+                </div>
+            </div>
+        </div>
+    ";
+}
+```
+</CodeGroup>
+
+## Slot Rendering
+
+The `resolveSlot()` method handles rendering for all slot types:
+
+```php
+public function resolveSlot(View|string|null $slot): string
+{
+    if ($slot === null) {
+        return '';
+    }
+
+    if ($slot instanceof View) {
+        return $slot->render();
+    }
+
+    return $slot;
+}
+```
+
+<Info>
+You don't need to call `resolveSlot()` directly — the table component handles this automatically.
+</Info>
+
+## Styling Tips
+
+<Steps>
+  <Step title="Match Theme Classes">
+    Use your table's theme classes for consistent styling:
+    
+    ```php
+    $btnClass = $this->isBootstrap5() 
+        ? 'btn btn-primary rounded-3'
+        : 'btn btn-primary rounded-lg';
+    ```
+  </Step>
+  
+  <Step title="Use Utility Classes">
+    Leverage your CSS framework's utility classes:
+    
+    ```php
+    return '<div class="flex items-center gap-2">...</div>';
+    ```
+  </Step>
+  
+  <Step title="Respect Dark Mode">
+    Check `$this->darkMode` for dark mode support:
+    
+    ```php
+    $bgClass = $this->darkMode 
+        ? 'bg-gray-800 text-gray-200'
+        : 'bg-gray-100 text-gray-800';
+    ```
+  </Step>
+</Steps>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Return null for empty slots" icon="circle-xmark">
+    Don't return empty strings — return `null` to avoid rendering empty elements.
+  </Card>
+  
+  <Card title="Use views for complexity" icon="eye">
+    Move complex HTML to Blade views for better maintainability.
+  </Card>
+  
+  <Card title="Access table state" icon="database">
+    Leverage table properties like `$this->totalRows` and `$this->hasActiveFilters()`.
+  </Card>
+  
+  <Card title="Check permissions" icon="lock">
+    Guard actions with authorization checks before displaying buttons.
+  </Card>
+</CardGroup>

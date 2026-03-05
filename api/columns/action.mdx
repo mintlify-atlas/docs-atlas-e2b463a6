@@ -1,0 +1,400 @@
+---
+title: ActionColumn
+description: Add interactive action buttons to table rows
+---
+
+## Overview
+
+The `ActionColumn` displays action buttons for each row in your table. It's perfect for edit, delete, view, or any custom action buttons. Actions are automatically disabled for sorting and searching.
+
+## Creating an Action Column
+
+### Basic Usage
+
+```php
+use Livewire\Tables\Columns\ActionColumn;
+
+ActionColumn::make()
+```
+
+### Factory Method
+
+You can also create action columns using the base `Column` class:
+
+```php
+use Livewire\Tables\Columns\Column;
+
+Column::actions()
+```
+
+### With Custom Field Name
+
+```php
+ActionColumn::make('row_actions')
+```
+
+If no field name is provided, a unique field name is automatically generated (e.g., `_actions_0`, `_actions_1`).
+
+## Action-Specific Methods
+
+<ParamField path="button" type="string, Closure, string, string|null, Closure|bool">
+  Add an action button to the column. Each button displays for every row.
+  
+  **Parameters:**
+  - `label`: The button text
+  - `action`: Closure that returns a Livewire action string (receives `$row` and `$table`)
+  - `class`: CSS classes for the button (default: empty string)
+  - `icon`: Optional icon HTML to display before the label (default: null)
+  - `visible`: Boolean or closure to conditionally show the button (default: true)
+  
+  ```php
+  ActionColumn::make()
+      ->button(
+          label: 'Edit',
+          action: fn($row) => "edit({$row->id})",
+          class: 'lt-btn-primary',
+          icon: '<svg>...</svg>',
+          visible: true
+      )
+  ```
+</ParamField>
+
+## Common Methods
+
+<ParamField path="label" type="string">
+  Set a custom label for the column header.
+  
+  **Default:** `'Actions'`
+  
+  ```php
+  ActionColumn::make()->label('Options')
+  ActionColumn::make()->label('Manage')
+  ```
+</ParamField>
+
+<ParamField path="render" type="Closure">
+  Completely customize the action cell rendering. This takes precedence over `button()` definitions. The closure receives the row model and optionally the table component.
+  
+  ```php
+  ActionColumn::make()->render(function($row, $table) {
+      return view('components.table-actions', ['row' => $row]);
+  })
+  ```
+</ParamField>
+
+<ParamField path="width" type="string">
+  Set the column width.
+  
+  ```php
+  ActionColumn::make()->width('150px')
+  ```
+</ParamField>
+
+<ParamField path="columnClass" type="string">
+  Apply CSS classes to both header and cells.
+  
+  ```php
+  ActionColumn::make()->columnClass('text-right')
+  ```
+</ParamField>
+
+<ParamField path="headerClass" type="string">
+  Apply CSS classes only to the column header.
+  
+  ```php
+  ActionColumn::make()->headerClass('text-center')
+  ```
+</ParamField>
+
+<ParamField path="cellClass" type="string">
+  Apply CSS classes only to the column cells.
+  
+  ```php
+  ActionColumn::make()->cellClass('text-right')
+  ```
+</ParamField>
+
+<ParamField path="hidden" type="void">
+  Hide the column from display.
+  
+  ```php
+  ActionColumn::make()->hidden()
+  ```
+</ParamField>
+
+<ParamField path="hideIf" type="bool">
+  Conditionally hide the column.
+  
+  ```php
+  ActionColumn::make()->hideIf(!auth()->user()->canManageUsers())
+  ```
+</ParamField>
+
+## Important Notes
+
+- **Sorting:** Action columns cannot be made sortable (the `sortable()` method is ignored)
+- **Searching:** Action columns cannot be made searchable with simple `searchable()` (requires a closure)
+- **Default Label:** If not specified, the label defaults to "Actions"
+- **Visibility:** Each button can have its own visibility condition
+
+## Examples
+
+### Basic Edit and Delete Actions
+
+```php
+public function columns(): array
+{
+    return [
+        TextColumn::make('name')->sortable()->searchable(),
+        TextColumn::make('email')->sortable()->searchable(),
+        
+        ActionColumn::make()
+            ->button('Edit', fn($row) => "edit({$row->id})", 'lt-btn-primary')
+            ->button('Delete', fn($row) => "delete({$row->id})", 'lt-btn-danger'),
+    ];
+}
+
+public function edit(int $id): void
+{
+    $this->redirect(route('users.edit', $id));
+}
+
+public public function delete(int $id): void
+{
+    User::findOrFail($id)->delete();
+    $this->dispatch('refresh');
+}
+```
+
+### Actions with Icons
+
+```php
+ActionColumn::make()
+    ->button(
+        label: 'Edit',
+        action: fn($row) => "edit({$row->id})",
+        class: 'lt-btn-primary',
+        icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>'
+    )
+    ->button(
+        label: 'Delete',
+        action: fn($row) => "confirmDelete({$row->id})",
+        class: 'lt-btn-danger',
+        icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>'
+    )
+```
+
+### Conditional Button Visibility
+
+```php
+ActionColumn::make()
+    ->button(
+        label: 'Edit',
+        action: fn($row) => "edit({$row->id})",
+        class: 'lt-btn-primary',
+        visible: fn($row) => auth()->user()->can('update', $row)
+    )
+    ->button(
+        label: 'Delete',
+        action: fn($row) => "delete({$row->id})",
+        class: 'lt-btn-danger',
+        visible: fn($row) => auth()->user()->can('delete', $row)
+    )
+    ->button(
+        label: 'Restore',
+        action: fn($row) => "restore({$row->id})",
+        class: 'lt-btn-secondary',
+        visible: fn($row) => $row->trashed()
+    )
+```
+
+### Multiple Action Types
+
+```php
+ActionColumn::make()
+    ->label('Manage')
+    ->button('View', fn($row) => "view({$row->id})", 'lt-btn-secondary')
+    ->button('Edit', fn($row) => "edit({$row->id})", 'lt-btn-primary')
+    ->button('Clone', fn($row) => "clone({$row->id})", 'lt-btn-secondary')
+    ->button('Archive', fn($row) => "archive({$row->id})", 'lt-btn-warning')
+    ->button('Delete', fn($row) => "delete({$row->id})", 'lt-btn-danger')
+```
+
+### Actions with Confirmation
+
+```php
+ActionColumn::make()
+    ->button(
+        label: 'Delete',
+        action: fn($row) => "confirmDelete({$row->id})",
+        class: 'lt-btn-danger'
+    )
+
+// In your component class
+public bool $showDeleteConfirm = false;
+public ?int $deleteUserId = null;
+
+public function confirmDelete(int $id): void
+{
+    $this->deleteUserId = $id;
+    $this->showDeleteConfirm = true;
+}
+
+public function delete(): void
+{
+    if ($this->deleteUserId) {
+        User::findOrFail($this->deleteUserId)->delete();
+        $this->showDeleteConfirm = false;
+        $this->deleteUserId = null;
+    }
+}
+```
+
+### Custom Rendered Actions
+
+```php
+ActionColumn::make()
+    ->render(function($row, $table) {
+        return view('livewire.tables.user-actions', [
+            'user' => $row,
+            'table' => $table,
+        ]);
+    })
+```
+
+```blade
+{{-- resources/views/livewire/tables/user-actions.blade.php --}}
+<div class="flex gap-2">
+    <button wire:click="edit({{ $user->id }})" class="lt-btn-primary">
+        Edit
+    </button>
+    
+    @can('delete', $user)
+        <button wire:click="delete({{ $user->id }})" class="lt-btn-danger">
+            Delete
+        </button>
+    @endcan
+</div>
+```
+
+### Dropdown Menu Actions
+
+```php
+ActionColumn::make()
+    ->render(function($row) {
+        return '
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open" class="lt-btn-secondary">
+                    Actions ▼
+                </button>
+                <div x-show="open" 
+                     @click.away="open = false"
+                     class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                    <button wire:click="edit(' . $row->id . ')" class="block w-full text-left px-4 py-2 hover:bg-gray-100">
+                        Edit
+                    </button>
+                    <button wire:click="duplicate(' . $row->id . ')" class="block w-full text-left px-4 py-2 hover:bg-gray-100">
+                        Duplicate
+                    </button>
+                    <button wire:click="archive(' . $row->id . ')" class="block w-full text-left px-4 py-2 hover:bg-gray-100">
+                        Archive
+                    </button>
+                    <hr class="my-1">
+                    <button wire:click="delete(' . $row->id . ')" class="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        ';
+    })
+```
+
+### Actions with Dynamic Classes
+
+```php
+ActionColumn::make()
+    ->button(
+        label: 'Toggle Status',
+        action: fn($row) => "toggleStatus({$row->id})",
+        class: fn($row) => $row->active ? 'lt-btn-success' : 'lt-btn-secondary'
+    )
+```
+
+### Icon-Only Actions
+
+```php
+ActionColumn::make()
+    ->label('')
+    ->button(
+        label: '',
+        action: fn($row) => "edit({$row->id})",
+        class: 'lt-btn-icon',
+        icon: '✏️'
+    )
+    ->button(
+        label: '',
+        action: fn($row) => "delete({$row->id})",
+        class: 'lt-btn-icon',
+        icon: '🗑️'
+    )
+    ->width('80px')
+```
+
+## Default Rendering
+
+When using the `button()` method, the column renders buttons automatically:
+
+```php
+// Source code from ActionColumn.php:76-106
+public function renderCell(Model $row, mixed $table = null): string
+{
+    if ($this->renderCallback !== null) {
+        $result = ($this->renderCallback)($row, $table);
+        return $result instanceof View ? $result->render() : (string) $result;
+    }
+
+    $html = '<div style="display:flex;gap:0.25rem;align-items:center;flex-wrap:wrap">';
+
+    foreach ($this->actions as $action) {
+        $isVisible = $action['visible'] instanceof Closure
+            ? ($action['visible'])($row)
+            : $action['visible'];
+
+        if (!$isVisible) {
+            continue;
+        }
+
+        $wireAction = ($action['action'])($row, $table);
+        $icon = $action['icon'] ?? '';
+        $class = $action['class'];
+        $label = e($action['label']);
+
+        $html .= "<button type=\"button\" wire:click=\"{$wireAction}\" class=\"{$class}\">{$icon}{$label}</button>";
+    }
+
+    $html .= '</div>';
+
+    return $html;
+}
+```
+
+## Public Getters
+
+- `getActions(): array` - Returns the array of all configured action buttons
+
+## Type
+
+The column type identifier for `ActionColumn` is `'action'`.
+
+## Styling Action Buttons
+
+The package provides default button classes that adapt to your theme:
+
+- `lt-btn-primary` - Primary action button (blue/brand color)
+- `lt-btn-secondary` - Secondary action button (gray)
+- `lt-btn-success` - Success action button (green)
+- `lt-btn-warning` - Warning action button (yellow/orange)
+- `lt-btn-danger` - Danger action button (red)
+- `lt-btn-icon` - Icon-only button (minimal styling)
+
+These classes work with Tailwind CSS, Bootstrap 5, and Bootstrap 4 themes.

@@ -1,0 +1,294 @@
+---
+title: BooleanColumn
+description: Display boolean values with custom labels
+---
+
+## Overview
+
+The `BooleanColumn` displays boolean (true/false) values with customizable text labels. By default, it shows "Yes" for true and "No" for false.
+
+## Creating a Boolean Column
+
+### Basic Usage
+
+```php
+use Livewire\Tables\Columns\BooleanColumn;
+
+BooleanColumn::make('active')
+```
+
+### Factory Method
+
+You can also create boolean columns using the base `Column` class:
+
+```php
+use Livewire\Tables\Columns\Column;
+
+Column::boolean('active')
+```
+
+## Boolean-Specific Methods
+
+<ParamField path="labels" type="string, string">
+  Customize the text displayed for true and false values.
+  
+  ```php
+  BooleanColumn::make('active')->labels('Active', 'Inactive')
+  BooleanColumn::make('verified')->labels('✓ Verified', '✗ Not Verified')
+  BooleanColumn::make('enabled')->labels('On', 'Off')
+  ```
+</ParamField>
+
+## Common Methods
+
+Boolean columns support all common column methods:
+
+<ParamField path="label" type="string">
+  Set a custom label for the column header.
+  
+  ```php
+  BooleanColumn::make('is_admin')->label('Admin')
+  ```
+</ParamField>
+
+<ParamField path="sortable" type="void">
+  Enable sorting on this column.
+  
+  ```php
+  BooleanColumn::make('active')->sortable()
+  ```
+</ParamField>
+
+<ParamField path="searchable" type="string|Closure|null">
+  Enable searching on this column. You can pass a custom field name or search callback.
+  
+  ```php
+  BooleanColumn::make('active')->searchable()
+  ```
+</ParamField>
+
+<ParamField path="format" type="Closure">
+  Apply custom formatting to the boolean value. The closure receives the boolean value and the row model.
+  
+  ```php
+  BooleanColumn::make('active')->format(function($value, $row) {
+      return $value 
+          ? '<span class="text-green-600">Active</span>' 
+          : '<span class="text-gray-400">Inactive</span>';
+  })
+  ```
+</ParamField>
+
+<ParamField path="render" type="Closure">
+  Completely customize the cell content. This takes precedence over both `labels()` and `format()`.
+  
+  ```php
+  BooleanColumn::make('verified')->render(function($row) {
+      return $row->verified 
+          ? '<span class="badge badge-success">✓</span>'
+          : '<span class="badge badge-warning">Pending</span>';
+  })
+  ```
+</ParamField>
+
+<ParamField path="width" type="string">
+  Set the column width.
+  
+  ```php
+  BooleanColumn::make('active')->width('100px')
+  ```
+</ParamField>
+
+<ParamField path="columnClass" type="string">
+  Apply CSS classes to both header and cells.
+  
+  ```php
+  BooleanColumn::make('active')->columnClass('text-center')
+  ```
+</ParamField>
+
+<ParamField path="headerClass" type="string">
+  Apply CSS classes only to the column header.
+  
+  ```php
+  BooleanColumn::make('active')->headerClass('text-center')
+  ```
+</ParamField>
+
+<ParamField path="cellClass" type="string">
+  Apply CSS classes only to the column cells.
+  
+  ```php
+  BooleanColumn::make('active')->cellClass('text-center font-semibold')
+  ```
+</ParamField>
+
+<ParamField path="hidden" type="void">
+  Hide the column from display.
+  
+  ```php
+  BooleanColumn::make('internal_flag')->hidden()
+  ```
+</ParamField>
+
+<ParamField path="hideIf" type="bool">
+  Conditionally hide the column.
+  
+  ```php
+  BooleanColumn::make('is_admin')->hideIf(!auth()->user()->canManageAdmins())
+  ```
+</ParamField>
+
+## Examples
+
+### Basic Active Status
+
+```php
+public function columns(): array
+{
+    return [
+        TextColumn::make('name')->sortable()->searchable(),
+        
+        BooleanColumn::make('active')
+            ->sortable()
+            ->labels('Active', 'Inactive'),
+    ];
+}
+```
+
+### Centered Boolean Column
+
+```php
+BooleanColumn::make('is_verified')
+    ->label('Verified')
+    ->sortable()
+    ->labels('✓', '✗')
+    ->columnClass('text-center')
+    ->width('100px')
+```
+
+### Boolean with Custom Styling
+
+```php
+BooleanColumn::make('active')
+    ->label('Status')
+    ->sortable()
+    ->format(function($value, $row) {
+        if ($value) {
+            return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">'
+                . 'Active'
+                . '</span>';
+        }
+        
+        return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">'
+            . 'Inactive'
+            . '</span>';
+    })
+```
+
+### Multiple Boolean Columns
+
+```php
+public function columns(): array
+{
+    return [
+        TextColumn::make('name')->sortable()->searchable(),
+        
+        BooleanColumn::make('is_active')
+            ->label('Active')
+            ->sortable()
+            ->labels('Yes', 'No'),
+            
+        BooleanColumn::make('is_verified')
+            ->label('Verified')
+            ->sortable()
+            ->labels('✓', '✗')
+            ->columnClass('text-center'),
+            
+        BooleanColumn::make('has_premium')
+            ->label('Premium')
+            ->sortable()
+            ->labels('Pro', 'Free'),
+    ];
+}
+```
+
+### Boolean with Icons
+
+```php
+BooleanColumn::make('email_verified')
+    ->label('Email')
+    ->format(function($value, $row) {
+        if ($value) {
+            return '<svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">' .
+                   '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>' .
+                   '</svg>';
+        }
+        
+        return '<svg class="w-5 h-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">' .
+               '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>' .
+               '</svg>';
+    })
+    ->columnClass('text-center')
+```
+
+### Boolean with Conditional Row Styling
+
+```php
+BooleanColumn::make('featured')
+    ->label('Featured')
+    ->sortable()
+    ->labels('★ Featured', 'Standard')
+    ->format(function($value, $row) {
+        return $value 
+            ? '<strong class="text-yellow-600">★ Featured</strong>'
+            : '<span class="text-gray-500">Standard</span>';
+    })
+```
+
+### Boolean Toggle Appearance
+
+```php
+BooleanColumn::make('notifications_enabled')
+    ->label('Notifications')
+    ->render(function($row) {
+        $status = $row->notifications_enabled ? 'On' : 'Off';
+        $color = $row->notifications_enabled ? 'bg-blue-500' : 'bg-gray-300';
+        
+        return "<span class='inline-flex items-center'>" .
+               "<span class='relative inline-block w-10 h-6 {$color} rounded-full'>" .
+               "</span>" .
+               "<span class='ml-2 text-sm'>{$status}</span>" .
+               "</span>";
+    })
+```
+
+## Resolution
+
+The `BooleanColumn` uses the base `Column::resolveValue()` method with custom logic:
+
+1. If a `render()` callback is set, it's used first
+2. If a `format()` callback is set, it receives the boolean value
+3. Otherwise, the value is evaluated and returns either `$trueLabel` or `$falseLabel`
+
+```php
+// Source code from BooleanColumn.php:33-46
+public function resolveValue(Model $row): mixed
+{
+    if ($this->renderCallback !== null) {
+        return ($this->renderCallback)($row);
+    }
+
+    $value = data_get($row, $this->resolutionKey());
+
+    if ($this->formatCallback !== null) {
+        return ($this->formatCallback)($value, $row);
+    }
+
+    return $value ? $this->trueLabel : $this->falseLabel;
+}
+```
+
+## Type
+
+The column type identifier for `BooleanColumn` is `'boolean'`.

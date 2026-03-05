@@ -1,0 +1,146 @@
+---
+title: Introduction
+description: Full-featured reactive data tables for Laravel with sorting, filtering, pagination, bulk actions, and CSV export
+---
+
+<div className="bg-gradient-to-br from-[#22273a] to-[#7b86aa] rounded-lg p-12 text-white mb-8">
+  <h1 className="text-5xl font-bold mb-4" style={{fontFamily: 'Inter'}}>Laravel Livewire Tables</h1>
+  <p className="text-xl mb-8" style={{fontFamily: 'Inter'}}>The easiest way to build full-featured, reactive data tables in Laravel. Search, sort, filter, paginate, export to CSV, bulk actions — zero custom JavaScript required.</p>
+  <div className="flex gap-4">
+    <a href="/quickstart" className="px-6 py-3 rounded-sm font-semibold" style={{backgroundColor: '#e91e63', color: '#ffffff'}}>Get Started</a>
+    <a href="https://github.com/alp-develop/laravel-livewire-tables" className="px-6 py-3 rounded-sm font-semibold" style={{backgroundColor: 'transparent', color: '#ffffff', border: '1px solid #ffffff'}}>View on GitHub</a>
+  </div>
+</div>
+
+## Why Laravel Livewire Tables?
+
+A powerful, server-side data table component for **Laravel 10, 11, 12** and **Livewire 3, 4**. Designed for real-world applications that need sorting, searching, filtering, bulk actions, CSV export, dark mode, and multiple theme support — all in a single, easy-to-use package.
+
+<CardGroup cols={2}>
+  <Card title="Zero Custom JavaScript" icon="code">
+    100% server-side. Powered by Livewire with Alpine.js for reactive UI interactions.
+  </Card>
+  <Card title="Multi-Version Support" icon="layer-group">
+    Laravel 10/11/12, Livewire 3/4, PHP 8.1–8.4 — fully tested across 184 tests.
+  </Card>
+  <Card title="Three Beautiful Themes" icon="palette">
+    Tailwind CSS, Bootstrap 5, Bootstrap 4 — all with dark mode support.
+  </Card>
+  <Card title="Production Ready" icon="shield-check">
+    184 tests, 479 assertions across 9 PHP/Laravel/Livewire combinations.
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<AccordionGroup>
+  <Accordion title="Search & Sorting">
+    Global full-text search across multiple columns with debounce and join alias support. Single or multi-column sorting with configurable default direction.
+  </Accordion>
+  
+  <Accordion title="Advanced Filtering">
+    Eight filter types: Text, Select, Boolean, Number, NumberRange, Date, DateRange, MultiDate with dependent/cascading support.
+  </Accordion>
+  
+  <Accordion title="Bulk Actions">
+    Exclusion-based selection model enabling instant select-all across pages. Execute custom actions on selected rows.
+  </Accordion>
+  
+  <Accordion title="CSV Export">
+    One-click CSV export from visible columns, or build custom exports with full control over data transformation.
+  </Accordion>
+  
+  <Accordion title="Column Types">
+    Text, Boolean, Date, Image (with lightbox), Blade (custom views), Action (buttons) — all with formatting support.
+  </Accordion>
+  
+  <Accordion title="Customization">
+    Six toolbar injection points, lifecycle hooks (onQuerying, onQueried, onRendering, onRendered), event system, and state persistence.
+  </Accordion>
+</AccordionGroup>
+
+## Compatibility
+
+Works with a wide range of Laravel, Livewire, and PHP versions:
+
+| PHP | Laravel | Livewire | Testbench |
+|-----|---------|----------|-----------|
+| 8.1 | 10.x   | 3.x     | 8.x       |
+| 8.2 | 10.x   | 3.x     | 8.x       |
+| 8.2 | 11.x   | 3.x     | 9.x       |
+| 8.3 | 11.x   | 3.x     | 9.x       |
+| 8.2 | 11.x   | 4.x     | 9.x       |
+| 8.3 | 11.x   | 4.x     | 9.x       |
+| 8.2 | 12.x   | 4.x     | 10.x      |
+| 8.3 | 12.x   | 4.x     | 10.x      |
+| 8.4 | 12.x   | 4.x     | 10.x      |
+
+## Quick Example
+
+```php UsersTable.php
+<?php
+
+namespace App\Livewire\Tables;
+
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Livewire\Tables\Columns\TextColumn;
+use Livewire\Tables\Columns\BooleanColumn;
+use Livewire\Tables\Filters\SelectFilter;
+use Livewire\Tables\Livewire\DataTableComponent;
+
+class UsersTable extends DataTableComponent
+{
+    public function configure(): void
+    {
+        $this->setDefaultPerPage(25);
+        $this->setSearchDebounce(300);
+    }
+
+    public function query(): Builder
+    {
+        return User::query();
+    }
+
+    public function columns(): array
+    {
+        return [
+            TextColumn::make('name')->sortable()->searchable(),
+            TextColumn::make('email')->sortable()->searchable(),
+            BooleanColumn::make('active')->sortable(),
+        ];
+    }
+
+    public function filters(): array
+    {
+        return [
+            SelectFilter::make('active')
+                ->setOptions(['' => 'All', '1' => 'Active', '0' => 'Inactive'])
+                ->filter(fn(Builder $q, $v) => $q->where('active', (bool) $v)),
+        ];
+    }
+}
+```
+
+Use it in your Blade template:
+
+```blade users.blade.php
+<livewire:tables.users-table />
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install the package and configure your Laravel application
+  </Card>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Build your first data table in under 5 minutes
+  </Card>
+  <Card title="Core Concepts" icon="book" href="/concepts/tables">
+    Learn about tables, columns, filters, and more
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/columns/text">
+    Explore all column and filter types
+  </Card>
+</CardGroup>

@@ -1,0 +1,553 @@
+---
+title: 'Filters'
+description: 'Add filters to narrow down table data with various input types'
+---
+
+## Overview
+
+Filters allow users to narrow down table data using various input types. All filters extend the base `Filter` class and implement `FilterContract`.
+
+## Defining Filters
+
+Override the `filters()` method in your table component:
+
+```php
+use Livewire\Tables\Filters\TextFilter;
+use Livewire\Tables\Filters\SelectFilter;
+use Livewire\Tables\Filters\BooleanFilter;
+
+public function filters(): array
+{
+    return [
+        TextFilter::make('name')
+            ->label('Name')
+            ->placeholder('Search by name...'),
+
+        SelectFilter::make('status')
+            ->label('Status')
+            ->setOptions([
+                'active' => 'Active',
+                'inactive' => 'Inactive',
+            ]),
+
+        BooleanFilter::make('verified')
+            ->label('Verified Only'),
+    ];
+}
+```
+
+## Filter Types
+
+### TextFilter
+
+Applies a `LIKE` query on the specified field:
+
+```php
+TextFilter::make('email')
+    ->label('Email')
+    ->placeholder('Filter by email...');
+```
+
+#### Custom Logic
+
+Search across multiple fields:
+
+```php
+TextFilter::make('full_name')
+    ->label('Name')
+    ->filter(fn(Builder $query, mixed $value) => $query
+        ->where('first_name', 'LIKE', "%{$value}%")
+        ->orWhere('last_name', 'LIKE', "%{$value}%")
+    );
+```
+
+### SelectFilter
+
+Dropdown with predefined options:
+
+```php
+SelectFilter::make('role')
+    ->label('Role')
+    ->setOptions([
+        'admin' => 'Admin',
+        'editor' => 'Editor',
+        'viewer' => 'Viewer',
+    ]);
+```
+
+#### Multiple Selection
+
+Allow selecting multiple options:
+
+```php
+SelectFilter::make('tags')
+    ->label('Tags')
+    ->setOptions($tagOptions)
+    ->multiple()
+    ->filter(fn(Builder $query, mixed $value) => 
+        $query->whereIn('tag_id', $value)
+    );
+```
+
+#### Searchable Dropdown
+
+Renders an Alpine-powered dropdown with text search:
+
+```php
+SelectFilter::make('country')
+    ->label('Country')
+    ->setOptions($countries)
+    ->searchable();
+```
+
+<Note>
+  Combine `searchable()` and `multiple()` for a searchable multi-select dropdown.
+</Note>
+
+<Warning>
+  `searchable()` is not supported on filters with `parent()` dependency. Dependent filters use a native `<select>` element.
+</Warning>
+
+### BooleanFilter
+
+Simple true/false toggle:
+
+```php
+BooleanFilter::make('active')
+    ->label('Active Only');
+```
+
+Applies a `WHERE field = 1` query when checked.
+
+### NumberFilter
+
+Numeric input with optional bounds:
+
+```php
+NumberFilter::make('price')
+    ->label('Minimum Price')
+    ->min(0)
+    ->max(10000)
+    ->step(0.01)
+    ->filter(fn(Builder $query, mixed $value) => 
+        $query->where('price', '>=', $value)
+    );
+```
+
+### NumberRangeFilter
+
+Two inputs for min/max range:
+
+```php
+NumberRangeFilter::make('price')
+    ->label('Price Range')
+    ->min(0.0)
+    ->max(9999.99)
+    ->step(0.01)
+    ->filter(function(Builder $query, mixed $value): Builder {
+        if (isset($value['min']) && $value['min'] !== '') {
+            $query->where('price', '>=', (float) $value['min']);
+        }
+        if (isset($value['max']) && $value['max'] !== '') {
+            $query->where('price', '<=', (float) $value['max']);
+        }
+        return $query;
+    });
+```
+
+<Info>
+  Values are automatically clamped to min/max bounds.
+</Info>
+
+### DateFilter
+
+Single date selection:
+
+```php
+DateFilter::make('created_at')
+    ->label('Created On')
+    ->minDate('2020-01-01')
+    ->maxDate('2030-12-31')
+    ->filter(fn(Builder $query, mixed $value) => 
+        $query->whereDate('created_at', $value)
+    );
+```
+
+### DateRangeFilter
+
+From/to date range using Flatpickr:
+
+```php
+DateRangeFilter::make('created_at')
+    ->label('Created Between')
+    ->format('Y-m-d')
+    ->minDate('2020-01-01')
+    ->maxDate('2030-12-31')
+    ->filter(function(Builder $query, mixed $value): Builder {
+        if (isset($value['from']) && $value['from'] !== '') {
+            $query->whereDate('created_at', '>=', $value['from']);
+        }
+        if (isset($value['to']) && $value['to'] !== '') {
+            $query->whereDate('created_at', '<=', $value['to']);
+        }
+        return $query;
+    });
+```
+
+### MultiDateFilter
+
+Select multiple individual dates using Flatpickr:
+
+```php
+MultiDateFilter::make('event_dates')
+    ->label('Event Dates')
+    ->format('Y-m-d')
+    ->minDate('2024-01-01')
+    ->maxDate('2025-12-31')
+    ->filter(function(Builder $query, mixed $value): Builder {
+        return $query->where(function(Builder $q) use ($value): void {
+            foreach ($value as $date) {
+                $q->orWhereDate('event_date', $date);
+            }
+        });
+    });
+```
+
+## Dependent Filters
+
+Create cascading filters where the child's options depend on the parent's value:
+
+```php
+public function filters(): array
+{
+    return [
+        SelectFilter::make('country')
+            ->label('Country')
+            ->setOptions([
+                'us' => 'United States',
+                'ca' => 'Canada',
+                'mx' => 'Mexico',
+            ]),
+
+        SelectFilter::make('city')
+            ->label('City')
+            ->parent('country')
+            ->parentFilter(fn($countryId) => 
+                City::where('country_id', $countryId)
+                    ->pluck('name', 'id')
+                    ->toArray()
+            ),
+    ];
+}
+```
+
+### How It Works
+
+<Steps>
+  <Step title="Set Dependency">
+    Use `parent('filter_key')` to link the child to the parent filter.
+  </Step>
+  
+  <Step title="Define Options Callback">
+    Use `parentFilter(Closure)` to receive the parent's current value and return an options array.
+  </Step>
+  
+  <Step title="Automatic Reset">
+    When the parent value changes, the child filter automatically resets to empty.
+  </Step>
+  
+  <Step title="Options Reload">
+    The child `<select>` re-renders with new options from `resolveOptions()`.
+  </Step>
+</Steps>
+
+### Multi-Level Dependencies
+
+Chain multiple levels of dependent filters:
+
+```php
+public function filters(): array
+{
+    return [
+        SelectFilter::make('country')
+            ->label('Country')
+            ->setOptions($countries),
+
+        SelectFilter::make('state')
+            ->label('State')
+            ->parent('country')
+            ->parentFilter(fn($countryId) => 
+                State::where('country_id', $countryId)
+                    ->pluck('name', 'id')
+                    ->toArray()
+            ),
+
+        SelectFilter::make('city')
+            ->label('City')
+            ->parent('state')
+            ->parentFilter(fn($stateId) => 
+                City::where('state_id', $stateId)
+                    ->pluck('name', 'id')
+                    ->toArray()
+            ),
+    ];
+}
+```
+
+<Warning>
+  Dependent filters do not support `searchable()`. The native `<select>` element is used to ensure proper reactivity.
+</Warning>
+
+## Custom Filter Logic
+
+Use the `filter()` method to override default query behavior:
+
+### Complex Queries
+
+```php
+SelectFilter::make('status')
+    ->label('Status')
+    ->setOptions(['recent' => 'Recent', 'old' => 'Old'])
+    ->filter(fn(Builder $query, mixed $value) => match($value) {
+        'recent' => $query->where('created_at', '>=', now()->subDays(30)),
+        'old' => $query->where('created_at', '<', now()->subDays(30)),
+        default => $query,
+    });
+```
+
+### Joined Tables
+
+```php
+SelectFilter::make('brands.tier')
+    ->label('Brand Tier')
+    ->setOptions([
+        '' => 'All Tiers',
+        'premium' => 'Premium',
+        'standard' => 'Standard',
+        'budget' => 'Budget',
+    ])
+    ->filter(fn(Builder $query, mixed $value) => 
+        $query->where('brands.tier', $value)
+    );
+```
+
+## Initial Values
+
+Set a default initial value that's pre-applied on load:
+
+```php
+SelectFilter::make('status')
+    ->label('Status')
+    ->setOptions([
+        'active' => 'Active',
+        'inactive' => 'Inactive',
+    ])
+    ->initialValue('active');
+```
+
+For multiple selection:
+
+```php
+SelectFilter::make('status_multi')
+    ->label('Statuses')
+    ->multiple()
+    ->searchable()
+    ->setOptions([
+        'pending' => 'Pending',
+        'shipped' => 'Shipped',
+        'delivered' => 'Delivered',
+    ])
+    ->initialValue(['pending', 'shipped']);
+```
+
+<Info>
+  Initial values are only applied when the table first mounts and no cached filter state exists.
+</Info>
+
+## Filter Keys
+
+Override the internal key:
+
+```php
+SelectFilter::make('category')
+    ->key('cat')
+    ->label('Category')
+    ->setOptions($categories);
+```
+
+Useful for shorter URL query parameters or avoiding naming conflicts.
+
+## Styling Filters
+
+Customize filter appearance:
+
+```php
+TextFilter::make('name')
+    ->label('Product Name')
+    ->filterClass('filter-name') // Wrapper class
+    ->labelClass('text-indigo-700 font-semibold') // Label class
+    ->inputClass('border-indigo-300 focus:ring-indigo-500'); // Input class
+```
+
+Or use the `groupClass()` alias:
+
+```php
+TextFilter::make('name')
+    ->groupClass('mb-4 border-b pb-3');
+```
+
+## Common Methods
+
+| Method | Description |
+|--------|-------------|
+| `label(string)` | Display label |
+| `key(string)` | Override the internal key |
+| `placeholder(string)` | Placeholder text |
+| `default(mixed)` | Default value (not pre-applied) |
+| `initialValue(mixed)` | Pre-applied initial value |
+| `filter(Closure)` | Custom query callback |
+| `groupClass(string)` | CSS class for filter wrapper |
+| `labelClass(string)` | CSS class for label |
+| `inputClass(string)` | CSS class for input element |
+| `filterClass(string)` | Alias for `groupClass()` |
+
+## Active Filters
+
+Active filters are displayed as chips in the toolbar:
+
+<img src="/images/filter-chips.png" alt="Active filter chips" />
+
+Users can:
+- Remove individual filters by clicking the ❌ button
+- Clear all filters at once
+
+### Programmatic Access
+
+Get applied filters in your component:
+
+```php
+$applied = $this->getAppliedFilters();
+// ['status' => 'active', 'price' => ['min' => 100, 'max' => 500]]
+```
+
+Check if filters are active:
+
+```php
+if ($this->hasActiveFilters()) {
+    // Do something
+}
+```
+
+## Complete Example
+
+```php app/Livewire/ProductsTable.php
+<?php
+
+namespace App\Livewire;
+
+use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
+use Livewire\Tables\Filters\TextFilter;
+use Livewire\Tables\Filters\SelectFilter;
+use Livewire\Tables\Filters\BooleanFilter;
+use Livewire\Tables\Filters\NumberRangeFilter;
+use Livewire\Tables\Filters\DateRangeFilter;
+use Livewire\Tables\Livewire\DataTableComponent;
+
+class ProductsTable extends DataTableComponent
+{
+    public function query(): Builder
+    {
+        return Product::query();
+    }
+
+    public function filters(): array
+    {
+        return [
+            TextFilter::make('name')
+                ->label('Product Name')
+                ->placeholder('Filter by name...')
+                ->filter(fn(Builder $query, mixed $value) => 
+                    $query->where('name', 'LIKE', "%{$value}%")
+                ),
+
+            SelectFilter::make('category')
+                ->key('cat')
+                ->label('Category')
+                ->searchable()
+                ->setOptions([
+                    '' => 'All Categories',
+                    'Laptops' => 'Laptops',
+                    'Phones' => 'Phones',
+                    'Tablets' => 'Tablets',
+                ])
+                ->filter(fn(Builder $query, mixed $value) => 
+                    $query->where('category', $value)
+                ),
+
+            SelectFilter::make('subcategory')
+                ->key('subcat')
+                ->label('Subcategory')
+                ->parent('cat')
+                ->parentFilter(function(mixed $value): array {
+                    $map = [
+                        'Laptops' => ['Business' => 'Business', 'Gaming' => 'Gaming'],
+                        'Phones' => ['Flagship' => 'Flagship', 'Mid-range' => 'Mid-range'],
+                        'Tablets' => ['iPad' => 'iPad', 'Android' => 'Android'],
+                    ];
+                    return $map[$value] ?? [];
+                })
+                ->filter(fn(Builder $query, mixed $value) => 
+                    $query->where('subcategory', $value)
+                ),
+
+            BooleanFilter::make('active')
+                ->label('Active Only')
+                ->filter(fn(Builder $query, mixed $value) => 
+                    $query->where('active', (bool) $value)
+                ),
+
+            NumberRangeFilter::make('price')
+                ->label('Price Range')
+                ->min(0.0)
+                ->max(9999.99)
+                ->step(0.01)
+                ->filter(function(Builder $query, mixed $value): Builder {
+                    if (isset($value['min']) && $value['min'] !== '') {
+                        $query->where('price', '>=', (float) $value['min']);
+                    }
+                    if (isset($value['max']) && $value['max'] !== '') {
+                        $query->where('price', '<=', (float) $value['max']);
+                    }
+                    return $query;
+                }),
+
+            DateRangeFilter::make('release_date')
+                ->label('Release Date Range')
+                ->format('Y-m-d')
+                ->minDate('2020-01-01')
+                ->maxDate('2027-12-31')
+                ->filter(function(Builder $query, mixed $value): Builder {
+                    if (isset($value['from']) && $value['from'] !== '') {
+                        $query->whereDate('release_date', '>=', $value['from']);
+                    }
+                    if (isset($value['to']) && $value['to'] !== '') {
+                        $query->whereDate('release_date', '<=', $value['to']);
+                    }
+                    return $query;
+                }),
+        ];
+    }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Sorting & Search" icon="magnifying-glass" href="/concepts/sorting-search">
+    Configure search and multi-column sorting
+  </Card>
+  <Card title="Pagination" icon="list-ol" href="/concepts/pagination">
+    Customize pagination behavior
+  </Card>
+</CardGroup>

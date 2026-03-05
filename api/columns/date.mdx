@@ -1,0 +1,352 @@
+---
+title: DateColumn
+description: Display and format date and datetime values
+---
+
+## Overview
+
+The `DateColumn` displays date and datetime values with automatic formatting. It handles `DateTime` objects, Carbon instances, and string dates, formatting them according to your specified format string.
+
+## Creating a Date Column
+
+### Basic Usage
+
+```php
+use Livewire\Tables\Columns\DateColumn;
+
+DateColumn::make('created_at')
+```
+
+### Factory Method
+
+You can also create date columns using the base `Column` class:
+
+```php
+use Livewire\Tables\Columns\Column;
+
+Column::date('created_at')
+```
+
+## Date-Specific Methods
+
+<ParamField path="format" type="string|Closure">
+  Specify the date format. Accepts either a PHP date format string or a closure for custom formatting logic.
+  
+  **Default format:** `'Y-m-d'`
+  
+  ```php
+  // Using a date format string
+  DateColumn::make('created_at')->format('M d, Y')
+  DateColumn::make('published_at')->format('F j, Y g:i A')
+  DateColumn::make('updated_at')->format('Y-m-d H:i:s')
+  
+  // Using a closure for custom logic
+  DateColumn::make('expires_at')->format(function($value, $row) {
+      if ($value === null) {
+          return 'Never';
+      }
+      
+      return $value->diffForHumans();
+  })
+  ```
+</ParamField>
+
+## Common Methods
+
+Date columns support all common column methods:
+
+<ParamField path="label" type="string">
+  Set a custom label for the column header.
+  
+  ```php
+  DateColumn::make('created_at')->label('Joined')
+  ```
+</ParamField>
+
+<ParamField path="sortable" type="void">
+  Enable sorting on this column.
+  
+  ```php
+  DateColumn::make('created_at')->sortable()
+  ```
+</ParamField>
+
+<ParamField path="searchable" type="string|Closure|null">
+  Enable searching on this column.
+  
+  ```php
+  DateColumn::make('created_at')->searchable()
+  ```
+</ParamField>
+
+<ParamField path="render" type="Closure">
+  Completely customize the cell content. This takes precedence over `format()`.
+  
+  ```php
+  DateColumn::make('published_at')->render(function($row) {
+      return $row->published_at?->format('M d, Y');
+  })
+  ```
+</ParamField>
+
+<ParamField path="width" type="string">
+  Set the column width.
+  
+  ```php
+  DateColumn::make('created_at')->width('150px')
+  ```
+</ParamField>
+
+<ParamField path="columnClass" type="string">
+  Apply CSS classes to both header and cells.
+  
+  ```php
+  DateColumn::make('created_at')->columnClass('text-gray-600')
+  ```
+</ParamField>
+
+<ParamField path="headerClass" type="string">
+  Apply CSS classes only to the column header.
+  
+  ```php
+  DateColumn::make('created_at')->headerClass('text-center')
+  ```
+</ParamField>
+
+<ParamField path="cellClass" type="string">
+  Apply CSS classes only to the column cells.
+  
+  ```php
+  DateColumn::make('created_at')->cellClass('text-sm text-gray-500')
+  ```
+</ParamField>
+
+<ParamField path="hidden" type="void">
+  Hide the column from display.
+  
+  ```php
+  DateColumn::make('deleted_at')->hidden()
+  ```
+</ParamField>
+
+<ParamField path="hideIf" type="bool">
+  Conditionally hide the column.
+  
+  ```php
+  DateColumn::make('verified_at')->hideIf(!auth()->user()->canViewVerification())
+  ```
+</ParamField>
+
+## Examples
+
+### Basic Date Column
+
+```php
+public function columns(): array
+{
+    return [
+        TextColumn::make('name')->sortable()->searchable(),
+        
+        DateColumn::make('created_at')
+            ->label('Created')
+            ->sortable()
+            ->format('M d, Y'),
+    ];
+}
+```
+
+### Date with Time
+
+```php
+DateColumn::make('published_at')
+    ->label('Published')
+    ->sortable()
+    ->format('F j, Y \\a\\t g:i A') // December 5, 2024 at 3:45 PM
+```
+
+### Relative Time (Human Readable)
+
+```php
+DateColumn::make('updated_at')
+    ->label('Last Updated')
+    ->sortable()
+    ->format(fn($value) => $value?->diffForHumans()) // "2 hours ago"
+```
+
+### ISO 8601 Format
+
+```php
+DateColumn::make('created_at')
+    ->label('Created')
+    ->sortable()
+    ->format('c') // 2024-12-05T15:45:00+00:00
+```
+
+### Short Date Format
+
+```php
+DateColumn::make('birth_date')
+    ->label('DOB')
+    ->sortable()
+    ->format('m/d/Y') // 12/05/2024
+```
+
+### Null-Safe Date with Fallback
+
+```php
+DateColumn::make('verified_at')
+    ->label('Verified')
+    ->sortable()
+    ->format(function($value, $row) {
+        if ($value === null) {
+            return '<span class="text-gray-400">Not verified</span>';
+        }
+        
+        return $value->format('M d, Y');
+    })
+```
+
+### Conditional Date Formatting
+
+```php
+DateColumn::make('expires_at')
+    ->label('Expires')
+    ->sortable()
+    ->format(function($value, $row) {
+        if ($value === null) {
+            return 'Never';
+        }
+        
+        if ($value->isPast()) {
+            return '<span class="text-red-600 font-semibold">Expired ' . $value->diffForHumans() . '</span>';
+        }
+        
+        if ($value->isToday()) {
+            return '<span class="text-orange-600">Today at ' . $value->format('g:i A') . '</span>';
+        }
+        
+        return $value->format('M d, Y');
+    })
+```
+
+### Multiple Date Columns
+
+```php
+public function columns(): array
+{
+    return [
+        TextColumn::make('title')->sortable()->searchable(),
+        
+        DateColumn::make('created_at')
+            ->label('Created')
+            ->sortable()
+            ->format('M d, Y'),
+            
+        DateColumn::make('updated_at')
+            ->label('Updated')
+            ->sortable()
+            ->format(fn($value) => $value->diffForHumans()),
+            
+        DateColumn::make('published_at')
+            ->label('Published')
+            ->sortable()
+            ->format('M d, Y g:i A'),
+    ];
+}
+```
+
+### Date with Timezone
+
+```php
+DateColumn::make('scheduled_at')
+    ->label('Scheduled')
+    ->sortable()
+    ->format(function($value, $row) {
+        return $value?->setTimezone(auth()->user()->timezone)
+                     ->format('M d, Y g:i A T');
+    })
+```
+
+### Day of Week Display
+
+```php
+DateColumn::make('appointment_date')
+    ->label('Appointment')
+    ->sortable()
+    ->format('l, F j, Y') // "Monday, December 5, 2024"
+```
+
+### Compact Date Display
+
+```php
+DateColumn::make('created_at')
+    ->label('Date')
+    ->sortable()
+    ->format('M j') // "Dec 5"
+    ->width('80px')
+    ->cellClass('text-xs text-gray-500')
+```
+
+## Date Format Reference
+
+Common PHP date format characters:
+
+| Format | Description | Example |
+|--------|-------------|----------|
+| `Y` | 4-digit year | 2024 |
+| `y` | 2-digit year | 24 |
+| `m` | Month (01-12) | 12 |
+| `n` | Month (1-12) | 12 |
+| `M` | Short month name | Dec |
+| `F` | Full month name | December |
+| `d` | Day (01-31) | 05 |
+| `j` | Day (1-31) | 5 |
+| `l` | Full day name | Monday |
+| `D` | Short day name | Mon |
+| `H` | 24-hour (00-23) | 15 |
+| `h` | 12-hour (01-12) | 03 |
+| `i` | Minutes (00-59) | 45 |
+| `s` | Seconds (00-59) | 30 |
+| `A` | AM/PM | PM |
+| `a` | am/pm | pm |
+| `T` | Timezone | UTC, EST |
+| `c` | ISO 8601 | 2024-12-05T15:45:00+00:00 |
+
+See the [PHP date() documentation](https://www.php.net/manual/en/function.date.php) for a complete reference.
+
+## Resolution
+
+The `DateColumn` resolution handles multiple input types:
+
+```php
+// Source code from DateColumn.php:36-55
+public function resolveValue(Model $row): mixed
+{
+    $value = data_get($row, $this->resolutionKey());
+
+    if ($this->formatCallback !== null) {
+        return ($this->formatCallback)($value, $row);
+    }
+
+    if ($value === null) {
+        return null;
+    }
+
+    if ($value instanceof \DateTimeInterface) {
+        return $value->format($this->dateFormat);
+    }
+
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp !== false ? date($this->dateFormat, $timestamp) : null;
+}
+```
+
+**Supported input types:**
+1. `DateTime` or `DateTimeInterface` instances (including Carbon)
+2. String dates (parsed with `strtotime()`)
+3. `null` (returns `null`)
+
+## Type
+
+The column type identifier for `DateColumn` is `'date'`.

@@ -1,0 +1,258 @@
+---
+title: Installation
+description: Install and configure Laravel Livewire Tables in your Laravel application
+---
+
+## Requirements
+
+Before installing Laravel Livewire Tables, ensure your environment meets the following requirements:
+
+| Dependency | Version |
+|------------|-------------------------|
+| PHP        | 8.1, 8.2, 8.3, or 8.4  |
+| Laravel    | 10.x, 11.x, or 12.x    |
+| Livewire   | 3.x or 4.x             |
+| Alpine.js  | Included with Livewire |
+
+<Info>
+The package is fully tested across 9 different PHP/Laravel/Livewire combinations to ensure compatibility.
+</Info>
+
+## Install via Composer
+
+Install the package using Composer:
+
+```bash
+composer require alp-develop/laravel-livewire-tables
+```
+
+The package uses Laravel's auto-discovery feature, so the service provider will be registered automatically. No manual configuration is required to get started.
+
+## Tailwind CSS Setup
+
+If you're using the **Tailwind CSS** theme (the default), you need to add one CSS rule to prevent Alpine.js flicker:
+
+```css
+[x-cloak] { display: none !important; }
+```
+
+Add this rule to your main CSS file (e.g., `resources/css/app.css`).
+
+<Warning>
+Without this CSS rule, you may see a brief flash of unstyled content when the table loads.
+</Warning>
+
+<Note>
+Bootstrap themes do not require this rule — Alpine.js handles visibility automatically through Livewire.
+</Note>
+
+## Bootstrap Setup
+
+To use Bootstrap instead of Tailwind CSS, publish the configuration file and change the theme setting:
+
+### Bootstrap 5
+
+```php
+// config/livewire-tables.php
+'theme' => 'bootstrap-5',
+// or use the alias:
+'theme' => 'bootstrap',
+```
+
+### Bootstrap 4
+
+```php
+// config/livewire-tables.php
+'theme' => 'bootstrap-4',
+```
+
+<Info>
+Make sure Bootstrap CSS is loaded in your layout file. The package does not include Bootstrap CSS.
+</Info>
+
+## Publishing Assets
+
+### Publish Configuration File
+
+Publish the configuration file to customize theme, colors, search debounce, and more:
+
+```bash
+php artisan vendor:publish --tag=livewire-tables-config
+```
+
+This creates `config/livewire-tables.php` with the following default settings:
+
+```php
+return [
+    'theme' => 'tailwind',
+    
+    'colors' => [
+        '50'  => '#f0fdfa',
+        '100' => '#ccfbf1',
+        '200' => '#99f6e4',
+        '400' => '#2dd4bf',
+        '500' => '#14b8a6',
+        '600' => '#0d9488',
+        '700' => '#0f766e',
+    ],
+    
+    'dark_mode' => [
+        'enabled' => false,
+        'selector' => '.lt-dark',
+        'colors' => [
+            'bg' => '#0f172a',
+            'bg-card' => '#1e293b',
+            'bg-subtle' => '#334155',
+            'border' => '#334155',
+            'text' => '#f1f5f9',
+            'text-muted' => '#94a3b8',
+        ],
+    ],
+    
+    'search_debounce' => 300,
+    'component_namespace' => 'Tables',
+];
+```
+
+<Tip>
+The `colors` configuration works identically for both Tailwind and Bootstrap themes, making it easy to maintain a consistent brand color across your application.
+</Tip>
+
+### Publish Views (Optional)
+
+Publish the view templates if you need to customize the table markup:
+
+```bash
+php artisan vendor:publish --tag=livewire-tables-views
+```
+
+Views will be copied to `resources/views/vendor/livewire-tables/`.
+
+### Publish Translations (Optional)
+
+Publish translation files to customize or add new languages:
+
+```bash
+php artisan vendor:publish --tag=livewire-tables-lang
+```
+
+Translations will be copied to `lang/vendor/livewire-tables/`.
+
+**Included languages:**
+- English (`en`)
+- Spanish (`es`)
+- Portuguese (`pt`)
+
+## Color Customization
+
+The package uses a primary color palette that can be customized in the config file. Here are some preset color palettes:
+
+<CodeGroup>
+
+```php Teal (Default)
+'colors' => [
+    '50'  => '#f0fdfa',
+    '100' => '#ccfbf1',
+    '200' => '#99f6e4',
+    '400' => '#2dd4bf',
+    '500' => '#14b8a6',
+    '600' => '#0d9488',
+    '700' => '#0f766e',
+],
+```
+
+```php Indigo
+'colors' => [
+    '50'  => '#eef2ff',
+    '100' => '#e0e7ff',
+    '200' => '#c7d2fe',
+    '400' => '#818cf8',
+    '500' => '#6366f1',
+    '600' => '#4f46e5',
+    '700' => '#4338ca',
+],
+```
+
+```php Purple
+'colors' => [
+    '50'  => '#faf5ff',
+    '100' => '#f3e8ff',
+    '200' => '#e9d5ff',
+    '400' => '#c084fc',
+    '500' => '#a855f7',
+    '600' => '#9333ea',
+    '700' => '#7e22ce',
+],
+```
+
+```php Rose
+'colors' => [
+    '50'  => '#fff1f2',
+    '100' => '#ffe4e6',
+    '200' => '#fecdd3',
+    '400' => '#fb7185',
+    '500' => '#f43f5e',
+    '600' => '#e11d48',
+    '700' => '#be123c',
+],
+```
+
+</CodeGroup>
+
+## Dark Mode Setup
+
+Enable dark mode support by updating the configuration:
+
+```php
+'dark_mode' => [
+    'enabled' => true,
+    'selector' => '.dark', // or '.lt-dark', '[data-bs-theme=dark]', etc.
+    'colors' => [
+        'bg' => '#0f172a',
+        'bg-card' => '#1e293b',
+        'bg-subtle' => '#334155',
+        'border' => '#334155',
+        'text' => '#f1f5f9',
+        'text-muted' => '#94a3b8',
+    ],
+],
+```
+
+The package will automatically apply dark mode styles when the configured selector is present on a parent element.
+
+<Note>
+Common selectors: `.dark` (Tailwind default), `.lt-dark`, `[data-bs-theme=dark]` (Bootstrap 5.3), or `body.dark-mode`.
+</Note>
+
+## Compatibility Matrix
+
+The package is tested across multiple PHP, Laravel, and Livewire versions:
+
+| PHP | Laravel | Livewire | Testbench |
+|-----|---------|----------|----------|
+| 8.1 | 10.x    | 3.x      | 8.x      |
+| 8.2 | 10.x    | 3.x      | 8.x      |
+| 8.2 | 11.x    | 3.x      | 9.x      |
+| 8.3 | 11.x    | 3.x      | 9.x      |
+| 8.2 | 11.x    | 4.x      | 9.x      |
+| 8.3 | 11.x    | 4.x      | 9.x      |
+| 8.2 | 12.x    | 4.x      | 10.x     |
+| 8.3 | 12.x    | 4.x      | 10.x     |
+| 8.4 | 12.x    | 4.x      | 10.x     |
+
+<Info>
+The package includes 184 tests with 479 assertions to ensure reliability across all supported versions.
+</Info>
+
+## Next Steps
+
+Now that you've installed the package, you're ready to create your first data table:
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Create your first table in 5 minutes
+  </Card>
+  <Card title="Configuration" icon="gear" href="/api/configuration">
+    Learn about all configuration options
+  </Card>
+</CardGroup>

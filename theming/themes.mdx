@@ -1,0 +1,386 @@
+---
+title: Themes
+description: Choose between Tailwind CSS, Bootstrap 5, or Bootstrap 4 themes for your data tables
+---
+
+Laravel Livewire Tables uses a driver pattern for theming, allowing you to choose between pre-built themes or create your own custom theme.
+
+## Built-in Themes
+
+The package includes three production-ready themes:
+
+| Theme | Config Value | Description |
+|-------|-------------|-------------|
+| **Tailwind CSS** | `tailwind` | Modern utility-first design with rounded corners and subtle shadows |
+| **Bootstrap 5** | `bootstrap-5` | Bootstrap 5 component classes with card-based layout |
+| **Bootstrap 4** | `bootstrap-4` | Bootstrap 4 component classes with legacy support |
+
+<Note>
+  The config value `bootstrap` is an alias that resolves to `bootstrap-5` for backward compatibility.
+</Note>
+
+## Setting the Theme
+
+### Global Configuration
+
+Set the default theme in `config/livewire-tables.php`:
+
+```php
+return [
+    'theme' => 'tailwind', // or 'bootstrap-5', 'bootstrap-4', 'bootstrap'
+];
+```
+
+<Tabs>
+  <Tab title="Tailwind CSS">
+    ```php
+    'theme' => 'tailwind',
+    ```
+    
+    **Requirements:**
+    - Tailwind CSS 3.x installed and configured
+    - No additional setup required
+  </Tab>
+  
+  <Tab title="Bootstrap 5">
+    ```php
+    'theme' => 'bootstrap-5',
+    // Alternative aliases:
+    // 'theme' => 'bootstrap5',
+    // 'theme' => 'bootstrap',
+    ```
+    
+    **Requirements:**
+    - Bootstrap 5.x CSS and JS
+    - Popper.js (for dropdowns)
+  </Tab>
+  
+  <Tab title="Bootstrap 4">
+    ```php
+    'theme' => 'bootstrap-4',
+    // Alternative alias:
+    // 'theme' => 'bootstrap4',
+    ```
+    
+    **Requirements:**
+    - Bootstrap 4.x CSS and JS
+    - jQuery and Popper.js
+  </Tab>
+</Tabs>
+
+### Per-Table Theme Override
+
+Override the theme for a specific table component by passing the `tableTheme` parameter:
+
+```php
+use Livewire\Livewire;
+use App\Livewire\Tables\UsersTable;
+
+// In your Blade view:
+Livewire::component('users-table', UsersTable::class, ['tableTheme' => 'bootstrap-5']);
+```
+
+Or using the Livewire tag syntax:
+
+```blade
+<livewire:users-table :tableTheme="'bootstrap-5'" />
+```
+
+<Warning>
+  The `tableTheme` parameter must be passed during component mounting. Changing it dynamically after mount will not work.
+</Warning>
+
+## How Themes Work
+
+Each theme implements the `ThemeContract` interface and provides:
+
+<Steps>
+  <Step title="CSS Class Mappings">
+    An array mapping UI element keys to CSS class strings:
+    
+    ```php
+    public function classes(): array
+    {
+        return [
+            'container' => 'bg-white rounded-xl shadow-sm border border-gray-200',
+            'table'     => 'min-w-full divide-y divide-gray-200',
+            'thead'     => 'bg-gray-50/80',
+            'th'        => 'px-4 py-3 text-left text-sm font-bold text-gray-600',
+            'tbody'     => 'bg-white divide-y divide-gray-100',
+            'tr'        => 'hover:bg-gray-50/60 transition-colors',
+            'td'        => 'px-4 py-3 text-sm text-gray-700',
+            // ... 90+ more element mappings
+        ];
+    }
+    ```
+  </Step>
+  
+  <Step title="Pagination View">
+    The Blade view used for rendering pagination:
+    
+    ```php
+    public function paginationView(): string
+    {
+        return 'livewire-tables::components.pagination.tailwind';
+    }
+    ```
+  </Step>
+  
+  <Step title="Important Prefix Support">
+    Whether the theme supports Tailwind's `!` important prefix:
+    
+    ```php
+    public function supportsImportantPrefix(): bool
+    {
+        return true; // Tailwind: true, Bootstrap: false
+    }
+    ```
+  </Step>
+</Steps>
+
+### ThemeContract Interface
+
+The complete interface that all themes must implement:
+
+```php
+namespace Livewire\Tables\Core\Contracts;
+
+interface ThemeContract
+{
+    public function name(): string;
+
+    /** @return array<string, string> */
+    public function classes(): array;
+
+    public function paginationView(): string;
+
+    public function supportsImportantPrefix(): bool;
+}
+```
+
+## Available CSS Class Keys
+
+Themes provide CSS classes for 90+ UI elements. Here are the main categories:
+
+### Structure
+
+- `container` — Main table wrapper
+- `toolbar` / `toolbar-row` / `toolbar-left` / `toolbar-right` — Toolbar layout
+- `wrapper` — Scrollable table container
+- `table` / `thead` / `tbody` / `th` / `tr` / `td` — Table structure
+
+### Interactive Elements
+
+- `search-input` / `search-icon` — Search functionality
+- `filter-btn` / `filter-btn-active` / `filter-badge` — Filter button states
+- `filter-dropdown` / `filter-group` / `filter-select` / `filter-input` — Filter controls
+- `column-btn` / `column-dropdown` / `column-checkbox` — Column visibility
+- `bulk-btn` / `bulk-btn-active` / `bulk-badge` / `bulk-checkbox` — Bulk actions
+
+### Visual Feedback
+
+- `th-sortable` / `th-sorted` / `sort-icon` / `sort-icon-active` — Sorting states
+- `chip-bar` / `chip` / `chip-remove` — Active filter chips
+- `badge-true` / `badge-false` — Boolean column badges
+- `empty-state` — No results message
+
+### Pagination & Selection
+
+- `pagination-wrapper` / `per-page-select` / `pagination-nav` — Pagination controls
+- `selection-bar` / `selection-count` / `selection-actions` — Row selection UI
+
+<Info>
+  View the complete list in the source: `src/Themes/TailwindTheme.php:28-98`
+</Info>
+
+## Per-Component Styling
+
+You can override specific CSS classes on a per-table basis using setter methods in your table component's `configure()` method:
+
+<CodeGroup>
+
+```php Table Structure
+public function configure(): void
+{
+    $this->setTableClass('min-w-full divide-y divide-blue-200');
+    $this->setTheadClass('bg-blue-100 text-blue-800');
+    $this->setTbodyClass('bg-white divide-y divide-blue-100');
+    
+    // Dynamic row classes based on data
+    $this->setRowClass(function ($row) {
+        return $row->is_active ? 'bg-green-50' : 'bg-red-50';
+    });
+}
+```
+
+```php Toolbar Buttons
+public function configure(): void
+{
+    // Filter button
+    $this->setFilterBtnClass('btn btn-outline-primary btn-sm');
+    $this->setFilterBtnActiveClass('btn btn-primary btn-sm');
+    
+    // Column visibility button
+    $this->setColumnBtnClass('btn btn-outline-secondary btn-sm');
+    
+    // Bulk actions button
+    $this->setBulkBtnClass('btn btn-outline-info btn-sm disabled');
+    $this->setBulkBtnActiveClass('btn btn-info btn-sm');
+}
+```
+
+```php Filter Controls
+public function configure(): void
+{
+    $this->setFilterGroupClass('mb-4');
+    $this->setFilterLabelClass('font-bold text-sm text-blue-700');
+    $this->setFilterInputClass('border-2 border-blue-300 rounded-lg');
+    $this->setFilterSelectClass('border-2 border-blue-300 rounded-lg');
+}
+```
+
+</CodeGroup>
+
+<Tip>
+  These methods accept either a string or a closure that receives the row data and returns a string.
+</Tip>
+
+## Creating a Custom Theme
+
+You can create your own theme by implementing the `ThemeContract` interface:
+
+<Steps>
+  <Step title="Create the Theme Class">
+    ```php
+    namespace App\Themes;
+    
+    use Livewire\Tables\Core\Contracts\ThemeContract;
+    
+    final class MaterialTheme implements ThemeContract
+    {
+        public function name(): string
+        {
+            return 'material';
+        }
+    
+        public function classes(): array
+        {
+            return [
+                'container' => 'mdc-data-table',
+                'table'     => 'mdc-data-table__table',
+                'thead'     => 'mdc-data-table__header-row',
+                'th'        => 'mdc-data-table__header-cell',
+                'tbody'     => 'mdc-data-table__content',
+                'tr'        => 'mdc-data-table__row',
+                'td'        => 'mdc-data-table__cell',
+                // ... map all 90+ element keys
+            ];
+        }
+    
+        public function paginationView(): string
+        {
+            return 'components.pagination.material';
+        }
+    
+        public function supportsImportantPrefix(): bool
+        {
+            return false;
+        }
+    }
+    ```
+  </Step>
+  
+  <Step title="Register in a Service Provider">
+    ```php
+    namespace App\Providers;
+    
+    use Illuminate\Support\ServiceProvider;
+    use Livewire\Tables\Themes\ThemeManager;
+    use App\Themes\MaterialTheme;
+    
+    class AppServiceProvider extends ServiceProvider
+    {
+        public function boot(): void
+        {
+            $manager = app(ThemeManager::class);
+            
+            // Register the theme
+            $manager->register('material', MaterialTheme::class);
+            
+            // Optionally set it as active
+            $manager->use('material');
+        }
+    }
+    ```
+  </Step>
+  
+  <Step title="Use the Theme">
+    ```php
+    // In config/livewire-tables.php
+    'theme' => 'material',
+    
+    // Or per-table
+    <livewire:users-table :tableTheme="'material'" />
+    ```
+  </Step>
+</Steps>
+
+## Publishing Views
+
+You can publish and customize the package's Blade views:
+
+```bash
+php artisan vendor:publish --tag=livewire-tables-views
+```
+
+Views are published to `resources/views/vendor/livewire-tables/`.
+
+<Warning>
+  After publishing views, you'll need to manually update them when upgrading the package.
+</Warning>
+
+## Theme Detection Helpers
+
+Inside your table component, you can check which theme is active:
+
+```php
+public function configure(): void
+{
+    if ($this->isTailwind()) {
+        $this->setTableClass('rounded-lg shadow-xl');
+    }
+    
+    if ($this->isBootstrap()) {
+        $this->setTableClass('table-hover table-striped');
+    }
+    
+    if ($this->isBootstrap5()) {
+        // Bootstrap 5 specific
+    }
+    
+    if ($this->isBootstrap4()) {
+        // Bootstrap 4 specific
+    }
+}
+```
+
+These helper methods are available:
+
+- `$this->theme()` — Returns the active theme name (string)
+- `$this->isTailwind()` — Returns `true` if theme is `'tailwind'`
+- `$this->isBootstrap()` — Returns `true` if theme starts with `'bootstrap'`
+- `$this->isBootstrap5()` — Returns `true` if theme is `'bootstrap5'`, `'bootstrap-5'`, or `'bootstrap'`
+- `$this->isBootstrap4()` — Returns `true` if theme is `'bootstrap4'` or `'bootstrap-4'`
+
+Source: `src/Livewire/Concerns/HasConfiguration.php:248-271`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Dark Mode" icon="moon" href="/theming/dark-mode">
+    Enable dark mode support with configurable color palettes
+  </Card>
+  <Card title="Customization" icon="palette" href="/theming/customization">
+    Customize the primary color palette and CSS custom properties
+  </Card>
+</CardGroup>

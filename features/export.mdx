@@ -1,0 +1,242 @@
+---
+title: "Export"
+description: "Automatically generate CSV exports from visible columns or create custom export logic"
+---
+
+The `HasExport` trait provides automatic CSV export functionality that works seamlessly with your table's columns, filters, and search.
+
+## Auto Export
+
+The simplest way to add CSV export is as a bulk action:
+
+```php
+public function bulkActions(): array
+{
+    return [
+        'exportCsvAuto' => 'Export CSV',
+    ];
+}
+```
+
+<Info>
+No additional code needed! The export automatically uses your table's configuration.
+</Info>
+
+### What Gets Exported
+
+The `exportCsvAuto()` method:
+
+- Uses visible column labels as CSV headers
+- Resolves cell values via each column's `resolveValue()` method
+- Excludes `blade`, `action`, and `image` column types
+- Respects active search, filters, and sort
+- When bulk selection is active, exports only selected rows
+- Streams the download for memory efficiency
+
+## Configuration
+
+Customize export behavior in your `configure()` method:
+
+```php
+public function configure(): void
+{
+    $this->setExportFilename('users');     // Default: 'export'
+    $this->setExportChunkSize(1000);       // Default: 500
+}
+```
+
+<Note>
+The filename is automatically suffixed with the current date: `users-2024-12-15.csv`
+</Note>
+
+### Chunk Size
+
+The `exportChunkSize` determines how many rows are loaded into memory at once. Larger values are faster but use more memory:
+
+<CodeGroup>
+```php Small Datasets
+$this->setExportChunkSize(500);  // Default
+```
+
+```php Large Datasets  
+$this->setExportChunkSize(1000); // Faster, more memory
+```
+
+```php Memory Constrained
+$this->setExportChunkSize(100);  // Slower, less memory
+```
+</CodeGroup>
+
+## Direct Usage
+
+Call `exportCsvAuto()` from any method, not just bulk actions:
+
+```php
+public function downloadReport(): StreamedResponse
+{
+    return $this->exportCsvAuto();
+}
+```
+
+Wire this to a button in your view:
+
+```blade
+<button wire:click="downloadReport">Download Full Report</button>
+```
+
+## Export Selected Only
+
+When rows are bulk-selected, `exportCsvAuto()` exports only those rows:
+
+```php
+// In your table component
+public function bulkActions(): array
+{
+    return [
+        'exportCsvAuto' => 'Export Selected', // Only exports selected rows
+    ];
+}
+```
+
+<Tip>
+If no rows are selected, the export includes the full filtered/searched query results.
+</Tip>
+
+## buildExportQuery() Helper
+
+The `buildExportQuery()` method returns a query builder with your table's pipeline applied:
+
+```php
+protected function buildExportQuery(): Builder
+{
+    $columns = $this->resolveColumns();
+    $filters = $this->filters();
+    $state = new State(search: $this->search, filters: $this->tableFilters);
+
+    $query = $this->query();
+    $query = (new SearchStep($columns))->apply($query, $state);
+    $query = (new FilterStep($filters))->apply($query, $state);
+    $query = (new SortStep($columns))->apply($query, $state);
+
+    // If bulk selection is active, filter to selected IDs
+    if ($this->selectAllPages || count($this->selectedIds) > 0) {
+        $ids = $this->getSelectedIds();
+        if (count($ids) > 0) {
+            $keyName = $query->getModel()->getKeyName();
+            $query->whereIn($keyName, $ids);
+        }
+    }
+
+    return $query;
+}
+```
+
+This is useful when building custom export logic.
+
+## Custom Export Methods
+
+For full control over the export format and content, create your own export method:
+
+<CodeGroup>
+```php Basic Custom Export
+use SymfonyComponentHttpFoundationStreamedResponse;
+
+public function exportCustom(): StreamedResponse
+{
+    $query = $this->buildExportQuery();
+
+    return response()->streamDownload(function () use ($query) {
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['ID', 'Name', 'Email']);
+
+        $query->chunk(500, function ($rows) use ($out) {
+            foreach ($rows as $row) {
+                fputcsv($out, [$row->id, $row->name, $row->email]);
+            }
+        });
+
+        fclose($out);
+    }, 'custom-export.csv', ['Content-Type' => 'text/csv']);
+}
+```
+
+```php Advanced Custom Export
+use SymfonyComponentHttpFoundationStreamedResponse;
+
+public function exportCsv(): StreamedResponse
+{
+    $ids = $this->getSelectedIds();
+
+    return response()->streamDownload(function () use ($ids): void {
+        $out = fopen('php://output', 'w');
+
+        fputcsv($out, ['ID', 'SKU', 'Name', 'Category', 'Brand', 'Price', 'Stock', 'Rating', 'Country', 'Active']);
+
+        CatalogItem::whereIn('id', $ids)
+            ->orderBy('id')
+            ->chunk(500, function ($items) use ($out): void {
+                foreach ($items as $item) {
+                    fputcsv($out, [
+                        $item->id,
+                        $item->sku,
+                        $item->name,
+                        $item->category,
+                        $item->brand,
+                        number_format((float) $item->price, 2),
+                        $item->stock,
+                        $item->rating,
+                        $item->country,
+                        $item->active ? 'Yes' : 'No',
+                    ]);
+                }
+            });
+
+        fclose($out);
+    }, 'catalog-export-'.now()->format('Y-m-d').'.csv', [
+        'Content-Type' => 'text/csv',
+    ]);
+}
+```
+</CodeGroup>
+
+## Custom Primary Keys and UUIDs
+
+The export system uses `getKeyName()` to determine the model's primary key:
+
+```php
+$keyName = $query->getModel()->getKeyName();
+$query->whereIn($keyName, $ids);
+```
+
+<Info>
+UUIDs and custom primary keys work automatically without any configuration.
+</Info>
+
+## Available Methods
+
+| Method | Description |
+|--------|-------------|
+| `exportCsvAuto()` | Auto-generate and stream CSV download |
+| `buildExportQuery()` | Get the query with pipeline + selection applied |
+| `setExportFilename(string)` | Set the export file name (no extension) |
+| `setExportChunkSize(int)` | Set the chunk size for streaming |
+
+## Export from Blade Template
+
+Add an export button directly in your view:
+
+```blade
+<div>
+    @if($this->hasBulkActions())
+        <button wire:click="exportCsvAuto">
+            Download CSV
+        </button>
+    @endif
+    
+    <livewire:your-table />
+</div>
+```
+
+<Tip>
+For large datasets, consider adding a loading indicator during export generation.
+</Tip>

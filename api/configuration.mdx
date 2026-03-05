@@ -1,0 +1,268 @@
+---
+title: Configuration Reference
+description: Complete reference for Laravel Livewire Tables configuration options
+---
+
+## Configuration File
+
+Laravel Livewire Tables provides extensive configuration options through the `config/livewire-tables.php` file. Publish the configuration file using:
+
+```bash
+php artisan vendor:publish --tag=livewire-tables-config
+```
+
+## Configuration Options
+
+### Theme
+
+The CSS framework theme used to render the tables.
+
+<ParamField path="theme" type="string" default="tailwind">
+  The theme determines which CSS classes are applied to table elements. Supported values:
+  - `tailwind` - Tailwind CSS styling
+  - `bootstrap-5` (aliases: `bootstrap5`, `bootstrap`)
+  - `bootstrap-4` (alias: `bootstrap4`)
+</ParamField>
+
+```php
+'theme' => 'tailwind',
+```
+
+### Primary Color Palette
+
+Customize the primary color used across all table components including buttons, checkboxes, pagination, filter badges, and selection bars.
+
+<ParamField path="colors" type="array" default="Teal preset">
+  Define colors for shades 50, 100, 200, 400, 500, 600, and 700. These map to CSS custom properties `--lt-primary-50` through `--lt-primary-700`. Works identically for both Tailwind and Bootstrap themes.
+</ParamField>
+
+**Available Presets:**
+
+<CodeGroup>
+```php Teal (Default)
+'colors' => [
+    '50' => '#f0fdfa',
+    '100' => '#ccfbf1',
+    '200' => '#99f6e4',
+    '400' => '#2dd4bf',
+    '500' => '#14b8a6',
+    '600' => '#0d9488',
+    '700' => '#0f766e',
+],
+```
+
+```php Indigo
+'colors' => [
+    '50' => '#eef2ff',
+    '100' => '#e0e7ff',
+    '200' => '#c7d2fe',
+    '400' => '#818cf8',
+    '500' => '#6366f1',
+    '600' => '#4f46e5',
+    '700' => '#4338ca',
+],
+```
+
+```php Sky
+'colors' => [
+    '50' => '#f0f9ff',
+    '100' => '#e0f2fe',
+    '200' => '#bae6fd',
+    '400' => '#38bdf8',
+    '500' => '#0ea5e9',
+    '600' => '#0284c7',
+    '700' => '#0369a1',
+],
+```
+
+```php Purple
+'colors' => [
+    '50' => '#faf5ff',
+    '100' => '#f3e8ff',
+    '200' => '#e9d5ff',
+    '400' => '#c084fc',
+    '500' => '#a855f7',
+    '600' => '#9333ea',
+    '700' => '#7e22ce',
+],
+```
+
+```php Rose
+'colors' => [
+    '50' => '#fff1f2',
+    '100' => '#ffe4e6',
+    '200' => '#fecdd3',
+    '400' => '#fb7185',
+    '500' => '#f43f5e',
+    '600' => '#e11d48',
+    '700' => '#be123c',
+],
+```
+
+```php Amber
+'colors' => [
+    '50' => '#fffbeb',
+    '100' => '#fef3c7',
+    '200' => '#fde68a',
+    '400' => '#fbbf24',
+    '500' => '#f59e0b',
+    '600' => '#d97706',
+    '700' => '#b45309',
+],
+```
+</CodeGroup>
+
+### Dark Mode
+
+Enable dark mode support for data tables. When enabled, the package injects CSS that automatically styles tables for dark backgrounds whenever the configured selector is present on a parent element.
+
+<ParamField path="dark_mode.enabled" type="bool" default="false">
+  Whether dark mode CSS is injected into the page
+</ParamField>
+
+<ParamField path="dark_mode.selector" type="string" default=".lt-dark">
+  The CSS selector that activates dark mode. Common choices:
+  - `.dark` - Tailwind default
+  - `.lt-dark` - Package default
+  - `[data-bs-theme=dark]` - Bootstrap 5.3
+  - `body.dark-mode` - Custom selector
+</ParamField>
+
+<ParamField path="dark_mode.colors" type="array">
+  Customize the dark mode color palette:
+  - `bg` - Page/outer background
+  - `bg-card` - Card/panel/table container background
+  - `bg-subtle` - Subtle backgrounds (thead, stripes, hover)
+  - `border` - Borders and dividers
+  - `text` - Primary text color
+  - `text-muted` - Secondary/muted text color
+</ParamField>
+
+**Available Dark Mode Presets:**
+
+<CodeGroup>
+```php Slate (Default)
+'dark_mode' => [
+    'enabled' => false,
+    'selector' => '.lt-dark',
+    'colors' => [
+        'bg' => '#0f172a',
+        'bg-card' => '#1e293b',
+        'bg-subtle' => '#334155',
+        'border' => '#334155',
+        'text' => '#f1f5f9',
+        'text-muted' => '#94a3b8',
+    ],
+],
+```
+
+```php Zinc
+'dark_mode' => [
+    'enabled' => true,
+    'selector' => '.dark',
+    'colors' => [
+        'bg' => '#18181b',
+        'bg-card' => '#27272a',
+        'bg-subtle' => '#3f3f46',
+        'border' => '#3f3f46',
+        'text' => '#fafafa',
+        'text-muted' => '#a1a1aa',
+    ],
+],
+```
+
+```php Neutral
+'dark_mode' => [
+    'enabled' => true,
+    'selector' => '.dark',
+    'colors' => [
+        'bg' => '#171717',
+        'bg-card' => '#262626',
+        'bg-subtle' => '#404040',
+        'border' => '#404040',
+        'text' => '#fafafa',
+        'text-muted' => '#a3a3a3',
+    ],
+],
+```
+</CodeGroup>
+
+### Search Debounce
+
+The debounce time in milliseconds for the search input. This delays the search request until the user stops typing for the given time.
+
+<ParamField path="search_debounce" type="int" default="300">
+  Recommended: 300-500 milliseconds for a smooth user experience without excessive server requests
+</ParamField>
+
+```php
+'search_debounce' => 300,
+```
+
+### Component Namespace
+
+The subdirectory inside `app/Livewire/` where the `make:livewiretable` command will generate new table components.
+
+<ParamField path="component_namespace" type="string" default="Tables">
+  Examples:
+  - `"Tables"` generates in `app/Livewire/Tables/`
+  - `"DataTables"` generates in `app/Livewire/DataTables/`
+  - `"Admin/Tables"` generates in `app/Livewire/Admin/Tables/`
+</ParamField>
+
+```php
+'component_namespace' => 'Tables',
+```
+
+## Component Configuration
+
+In addition to the global configuration file, each table component can override settings in its `configure()` method. See the [Methods Reference](/api/methods) for all available configuration methods.
+
+### Example Component Configuration
+
+```php
+use Livewire\Tables\Livewire\DataTableComponent;
+
+class UsersTable extends DataTableComponent
+{
+    public function configure(): void
+    {
+        $this->setDefaultPerPage(25)
+            ->setPerPageOptions([10, 25, 50, 100])
+            ->setSearchDebounce(500)
+            ->setDefaultSortDirection('desc')
+            ->setEmptyMessage('No users found');
+    }
+
+    public function query(): Builder
+    {
+        return User::query();
+    }
+
+    public function columns(): array
+    {
+        return [
+            Column::make('Name', 'name')->searchable()->sortable(),
+            Column::make('Email', 'email')->searchable(),
+            Column::make('Created', 'created_at')->sortable(),
+        ];
+    }
+}
+```
+
+## Per-Component Theme Override
+
+You can set a specific theme for an individual component by passing it during mount:
+
+```blade
+<livewire:users-table table-theme="bootstrap-5" />
+```
+
+Or set it as a property in your component:
+
+```php
+class UsersTable extends DataTableComponent
+{
+    public string $tableTheme = 'bootstrap-5';
+}
+```

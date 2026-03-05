@@ -1,0 +1,319 @@
+---
+title: "Joins"
+description: "Work with joined tables using dot notation and automatic alias resolution"
+---
+
+Columns automatically resolve joined table fields. Use dot notation (`table.column`) in column definitions and the engine handles search, sort, and display.
+
+## How It Works
+
+<Steps>
+  <Step title="Query with Joins">
+    Use Laravel's query builder to join related tables in your `query()` method.
+  </Step>
+  
+  <Step title="Dot Notation">
+    Reference joined columns using `table.column` syntax in `make()`.
+  </Step>
+  
+  <Step title="Automatic Resolution">
+    The engine uses qualified names for WHERE/ORDER BY clauses in SQL.
+  </Step>
+  
+  <Step title="Display Values">
+    Display values are resolved using the alias (`table_column`) or custom `AS` alias.
+  </Step>
+</Steps>
+
+<Info>
+`selectAs(string)` is available as an optional override for custom aliases.
+</Info>
+
+## Basic Example
+
+Join a `categories` table and make the category name searchable and sortable:
+
+```php
+use LivewireTablesColumnsTextColumn;
+
+public function query(): Builder
+{
+    return Product::query()
+        ->join('categories', 'categories.id', '=', 'products.category_id')
+        ->select('products.*', 'categories.name as category_name');
+}
+
+public function columns(): array
+{
+    return [
+        TextColumn::make('products.name')
+            ->label('Product'),
+
+        TextColumn::make('categories.name')
+            ->label('Category')
+            ->sortable()
+            ->searchable(),
+    ];
+}
+```
+
+The column `categories.name` will:
+- Search via `WHERE categories.name LIKE '%term%'`
+- Sort via `ORDER BY categories.name ASC`
+- Display: resolves the value from `category_name` on the result row
+
+<Note>
+Always `->select(...)` in your `query()` to include joined columns with aliases.
+</Note>
+
+## Multiple Joins
+
+Join multiple tables and reference their columns:
+
+```php OrdersTable.php
+public function query(): Builder
+{
+    return Order::query()
+        ->join('users', 'users.id', '=', 'orders.user_id')
+        ->join('products', 'products.id', '=', 'orders.product_id')
+        ->select(
+            'orders.*',
+            'users.name as user_name',
+            'products.name as product_name',
+        );
+}
+
+public function columns(): array
+{
+    return [
+        TextColumn::make('orders.id')->label('Order #'),
+        TextColumn::make('users.name')->label('Customer')->sortable()->searchable(),
+        TextColumn::make('products.name')->label('Product')->sortable()->searchable(),
+    ];
+}
+```
+
+## Joined Column with Filters
+
+Filter on joined table columns:
+
+```php OrdersTable.php
+public function query(): Builder
+{
+    return Order::query()
+        ->join('brands', 'brands.id', '=', 'orders.brand_id')
+        ->select(
+            'orders.*',
+            'orders.id as orders_id',
+            'brands.name as brands_name',
+            'brands.country as brands_country',
+            'brands.tier as brands_tier',
+        );
+}
+
+public function columns(): array
+{
+    return [
+        TextColumn::make('orders.id')
+            ->label('#')
+            ->sortable(),
+
+        TextColumn::make('brands.name')
+            ->label('Brand')
+            ->sortable()
+            ->searchable(),
+
+        TextColumn::make('brands.country')
+            ->label('Country')
+            ->sortable()
+            ->searchable(),
+
+        TextColumn::make('brands.tier')
+            ->label('Tier')
+            ->sortable(),
+    ];
+}
+
+public function filters(): array
+{
+    return [
+        SelectFilter::make('brands.tier')
+            ->label('Brand Tier')
+            ->setOptions([
+                '' => 'All Tiers',
+                'premium' => 'Premium',
+                'standard' => 'Standard',
+                'budget' => 'Budget',
+            ])
+            ->filter(fn (Builder $query, mixed $value) => $query->where('brands.tier', $value)),
+
+        SelectFilter::make('brands.country')
+            ->label('Brand Country')
+            ->setOptions([
+                '' => 'All Countries',
+                'USA' => 'USA',
+                'South Korea' => 'South Korea',
+                'Japan' => 'Japan',
+                'Switzerland' => 'Switzerland',
+            ])
+            ->filter(fn (Builder $query, mixed $value) => $query->where('brands.country', $value)),
+    ];
+}
+```
+
+## Alias Resolution
+
+The display value is automatically resolved using the table + column name as an alias:
+
+| Column Definition | SQL Qualified Name | Auto-Resolved Alias |
+|-------------------|-------------------|---------------------|
+| `categories.name` | `categories.name` | `categories_name` |
+| `users.email` | `users.email` | `users_email` |
+| `brands.country` | `brands.country` | `brands_country` |
+
+<Info>
+The auto-resolved alias replaces the dot with an underscore: `table.column` becomes `table_column`.
+</Info>
+
+## Custom Aliases
+
+If your query uses a different alias, you can specify it:
+
+```php
+public function query(): Builder
+{
+    return Product::query()
+        ->join('categories', 'categories.id', '=', 'products.category_id')
+        ->select('products.*', 'categories.name as cat_name'); // Custom alias
+}
+
+public function columns(): array
+{
+    return [
+        TextColumn::make('categories.name')
+            ->label('Category')
+            ->selectAs('cat_name') // Override auto-resolution
+            ->sortable()
+            ->searchable(),
+    ];
+}
+```
+
+<Warning>
+`selectAs()` is only needed when your SQL alias differs from the auto-resolved `table_column` pattern.
+</Warning>
+
+## Aggregates and Computed Columns
+
+Join with aggregate functions:
+
+```php
+public function query(): Builder
+{
+    return User::query()
+        ->leftJoin('orders', 'orders.user_id', '=', 'users.id')
+        ->select(
+            'users.*',
+            DB::raw('COUNT(orders.id) as order_count'),
+            DB::raw('SUM(orders.total) as total_revenue')
+        )
+        ->groupBy('users.id');
+}
+
+public function columns(): array
+{
+    return [
+        TextColumn::make('name')
+            ->label('Customer')
+            ->sortable()
+            ->searchable(),
+
+        TextColumn::make('order_count')
+            ->label('Orders')
+            ->sortable(),
+
+        TextColumn::make('total_revenue')
+            ->label('Revenue')
+            ->sortable()
+            ->format(fn ($value) => '$'.number_format($value, 2)),
+    ];
+}
+```
+
+## Key Points
+
+<CardGroup cols={2}>
+  <Card title="Always select columns" icon="square-check">
+    Use `->select(...)` in your query to include joined columns with aliases.
+  </Card>
+  
+  <Card title="Use table.column syntax" icon="period">
+    Reference joined columns as `table.column` in `make()` for unambiguous queries.
+  </Card>
+  
+  <Card title="Auto-alias resolution" icon="wand-magic-sparkles">
+    Display values automatically resolve from `table_column` aliases.
+  </Card>
+  
+  <Card title="Override when needed" icon="pen">
+    Use `selectAs()` only when your SQL alias differs from the auto-pattern.
+  </Card>
+</CardGroup>
+
+## Common Pitfalls
+
+<Warning>
+**Missing Select Statement**
+
+Don't forget to select the joined columns:
+
+```php
+// ❌ Wrong - category_name not selected
+return Product::query()
+    ->join('categories', 'categories.id', '=', 'products.category_id');
+
+// ✅ Correct - includes category_name
+return Product::query()
+    ->join('categories', 'categories.id', '=', 'products.category_id')
+    ->select('products.*', 'categories.name as category_name');
+```
+</Warning>
+
+<Warning>
+**Ambiguous Column Names**
+
+Always qualify column names when multiple tables have the same column:
+
+```php
+// ❌ Wrong - ambiguous 'id'
+TextColumn::make('id')
+
+// ✅ Correct - qualified
+TextColumn::make('orders.id')
+```
+</Warning>
+
+## Performance Tips
+
+<Tip>
+**Use Eager Loading for Relationships**
+
+For simple relationships, consider using Eloquent relationships with eager loading instead of manual joins:
+
+```php
+public function query(): Builder
+{
+    return Product::query()->with('category');
+}
+
+public function columns(): array
+{
+    return [
+        TextColumn::make('category.name')
+            ->label('Category'),
+    ];
+}
+```
+
+This may perform better for certain queries, especially with nested relationships.
+</Tip>

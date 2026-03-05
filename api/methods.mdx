@@ -1,0 +1,995 @@
+---
+title: Methods Reference
+description: Complete reference for DataTableComponent public methods and lifecycle hooks
+---
+
+## Required Methods
+
+Every table component must implement these abstract methods.
+
+### query()
+
+Define the base Eloquent query for the table data.
+
+<ParamField path="return" type="Builder" required>
+  Must return an Illuminate\Database\Eloquent\Builder instance
+</ParamField>
+
+```php
+public function query(): Builder
+{
+    return User::query()
+        ->with('roles', 'department')
+        ->where('active', true);
+}
+```
+
+### columns()
+
+Define the columns to display in the table.
+
+<ParamField path="return" type="array" required>
+  Must return an array of Column instances
+</ParamField>
+
+```php
+use Livewire\Tables\Columns\Column;
+
+public function columns(): array
+{
+    return [
+        Column::make('ID', 'id')->sortable(),
+        Column::make('Name', 'name')->searchable()->sortable(),
+        Column::make('Email', 'email')->searchable(),
+        Column::make('Role', 'role.name'),
+        Column::make('Created', 'created_at')->sortable(),
+    ];
+}
+```
+
+## Optional Methods
+
+### filters()
+
+Define filters that users can apply to the table data.
+
+<ParamField path="return" type="array" default="[]">
+  Returns an array of Filter instances
+</ParamField>
+
+```php
+use Livewire\Tables\Filters\SelectFilter;
+use Livewire\Tables\Filters\DateRangeFilter;
+use Livewire\Tables\Filters\BooleanFilter;
+
+public function filters(): array
+{
+    return [
+        SelectFilter::make('Role', 'role_id')
+            ->options(Role::pluck('name', 'id')->toArray()),
+        
+        BooleanFilter::make('Active', 'is_active'),
+        
+        DateRangeFilter::make('Created', 'created_at'),
+    ];
+}
+```
+
+### bulkActions()
+
+Define bulk actions that can be performed on selected rows.
+
+<ParamField path="return" type="array" default="[]">
+  Returns an associative array where keys are method names and values are labels
+</ParamField>
+
+```php
+public function bulkActions(): array
+{
+    return [
+        'deleteSelected' => 'Delete Selected',
+        'exportSelected' => 'Export Selected',
+        'activateSelected' => 'Activate',
+    ];
+}
+
+public function deleteSelected(): void
+{
+    User::whereIn('id', $this->getSelectedIds())->delete();
+    
+    $this->notify('Users deleted successfully');
+}
+```
+
+### build()
+
+Called during the mount lifecycle. Use this to set up initial state or perform one-time operations.
+
+```php
+public function build(): void
+{
+    // Perform one-time setup
+    $this->setDefaultPerPage(25);
+}
+```
+
+## Configuration Methods
+
+Configure table behavior and appearance. Call these methods in the `configure()` lifecycle hook.
+
+### setDefaultPerPage()
+
+Set the default number of rows per page.
+
+<ParamField path="perPage" type="int" required>
+  Number of rows to display per page
+</ParamField>
+
+```php
+protected function setDefaultPerPage(int $perPage): static
+
+// Usage
+public function configure(): void
+{
+    $this->setDefaultPerPage(50);
+}
+```
+
+### setPerPageOptions()
+
+Set the available per-page options in the dropdown.
+
+<ParamField path="options" type="array" required>
+  Array of integers representing rows per page options
+</ParamField>
+
+```php
+protected function setPerPageOptions(array $options): static
+
+// Usage
+public function configure(): void
+{
+    $this->setPerPageOptions([10, 25, 50, 100, 250]);
+}
+```
+
+### setSearchDebounce()
+
+Set the search input debounce time in milliseconds.
+
+<ParamField path="milliseconds" type="int" required>
+  Debounce time (0-5000 milliseconds)
+</ParamField>
+
+```php
+protected function setSearchDebounce(int $milliseconds): static
+
+// Usage
+public function configure(): void
+{
+    $this->setSearchDebounce(500);
+}
+```
+
+### setDefaultSortDirection()
+
+Set the default sort direction for columns.
+
+<ParamField path="direction" type="string" required>
+  Either "asc" or "desc"
+</ParamField>
+
+```php
+protected function setDefaultSortDirection(string $direction): static
+
+// Usage
+public function configure(): void
+{
+    $this->setDefaultSortDirection('desc');
+}
+```
+
+### setEmptyMessage()
+
+Set a custom message when no results are found.
+
+<ParamField path="message" type="string" required>
+  The message to display when the table is empty
+</ParamField>
+
+```php
+protected function setEmptyMessage(string $message): static
+
+// Usage
+public function configure(): void
+{
+    $this->setEmptyMessage('No users match your search criteria');
+}
+```
+
+## Styling Methods
+
+Customize the appearance of table elements.
+
+### setHeadClass()
+
+Set custom CSS classes for the table head (`<thead>`).
+
+```php
+protected function setHeadClass(string $class): static
+
+// Usage
+public function configure(): void
+{
+    $this->setHeadClass('bg-gray-100 font-bold uppercase text-xs');
+}
+```
+
+### setBodyClass()
+
+Set custom CSS classes for the table body (`<tbody>`).
+
+```php
+protected function setBodyClass(string $class): static
+
+// Usage
+public function configure(): void
+{
+    $this->setBodyClass('text-sm divide-y divide-gray-200');
+}
+```
+
+### setRowClass()
+
+Set custom CSS classes for table rows. Accepts a string or a closure for dynamic classes.
+
+<ParamField path="class" type="string|Closure" required>
+  Static class string or closure that receives the row model and returns a class string
+</ParamField>
+
+```php
+protected function setRowClass(string|Closure $class): static
+
+// Static usage
+public function configure(): void
+{
+    $this->setRowClass('hover:bg-gray-50 transition');
+}
+
+// Dynamic usage
+public function configure(): void
+{
+    $this->setRowClass(function ($row) {
+        return $row->is_active ? 'bg-green-50' : 'bg-red-50';
+    });
+}
+```
+
+### Filter Styling Methods
+
+Customize filter UI appearance.
+
+```php
+// Set filter group container classes
+protected function setFilterGroupClass(string $class): static
+
+// Set filter label classes
+protected function setFilterLabelClass(string $class): static
+
+// Set filter input/select classes
+protected function setFilterInputClass(string $class): static
+
+// Set filter button classes
+protected function setFilterBtnClass(string $class): static
+
+// Set active filter button classes
+protected function setFilterBtnActiveClass(string $class): static
+
+// Usage
+public function configure(): void
+{
+    $this->setFilterGroupClass('space-y-4')
+        ->setFilterLabelClass('font-medium text-sm')
+        ->setFilterInputClass('rounded-lg border-gray-300');
+}
+```
+
+### Bulk Action Styling Methods
+
+Customize bulk action button appearance.
+
+```php
+// Set bulk action button classes
+protected function setBulkBtnClass(string $class): static
+
+// Set active bulk action button classes
+protected function setBulkBtnActiveClass(string $class): static
+
+// Set column visibility button classes
+protected function setColumnBtnClass(string $class): static
+
+// Usage
+public function configure(): void
+{
+    $this->setBulkBtnClass('px-4 py-2 bg-blue-500 text-white rounded')
+        ->setBulkBtnActiveClass('px-4 py-2 bg-blue-700 text-white rounded');
+}
+```
+
+## Selection Methods
+
+Manage row selection for bulk actions.
+
+### getSelectedIds()
+
+Get the array of selected row IDs, respecting "select all pages" mode.
+
+<ParamField path="return" type="array">
+  Array of selected row IDs as strings
+</ParamField>
+
+```php
+public function getSelectedIds(): array
+
+// Usage
+public function deleteSelected(): void
+{
+    $ids = $this->getSelectedIds();
+    User::whereIn('id', $ids)->delete();
+}
+```
+
+### deselectAll()
+
+Clear all row selections.
+
+```php
+public function deselectAll(): void
+
+// Usage
+public function afterBulkAction(): void
+{
+    $this->deselectAll();
+    $this->notify('Action completed');
+}
+```
+
+### toggleSelected()
+
+Toggle the selection state of a specific row.
+
+<ParamField path="id" type="mixed" required>
+  The ID of the row to toggle
+</ParamField>
+
+```php
+public function toggleSelected(mixed $id): void
+```
+
+### selectAllAcrossPages()
+
+Select all rows across all pages (respecting current filters).
+
+```php
+public function selectAllAcrossPages(): void
+```
+
+### getSelectedCount()
+
+Get the count of selected rows.
+
+<ParamField path="total" type="int" required>
+  Total number of rows (from pagination)
+</ParamField>
+
+<ParamField path="return" type="int">
+  Number of selected rows
+</ParamField>
+
+```php
+public function getSelectedCount(int $total): int
+```
+
+## Column Methods
+
+Manage column visibility and retrieval.
+
+### getAllColumns()
+
+Get all visible columns (excluding hidden columns).
+
+<ParamField path="return" type="array">
+  Array of ColumnContract instances
+</ParamField>
+
+```php
+public function getAllColumns(): array
+```
+
+### getVisibleColumns()
+
+Get visible columns that are not manually hidden by the user.
+
+<ParamField path="return" type="array">
+  Array of ColumnContract instances
+</ParamField>
+
+```php
+public function getVisibleColumns(): array
+```
+
+### getSearchableColumns()
+
+Get all columns that have search enabled.
+
+<ParamField path="return" type="array">
+  Array of ColumnContract instances
+</ParamField>
+
+```php
+public function getSearchableColumns(): array
+```
+
+### toggleColumn()
+
+Toggle the visibility of a column by field name.
+
+<ParamField path="field" type="string" required>
+  The field name of the column to toggle
+</ParamField>
+
+```php
+public function toggleColumn(string $field): void
+
+// Usage in Blade
+<button wire:click="toggleColumn('email')">
+    Toggle Email Column
+</button>
+```
+
+### isColumnVisible()
+
+Check if a column is currently visible.
+
+<ParamField path="field" type="string" required>
+  The field name to check
+</ParamField>
+
+<ParamField path="return" type="bool">
+  True if the column is visible
+</ParamField>
+
+```php
+public function isColumnVisible(string $field): bool
+```
+
+## Filter Methods
+
+Manage filter state and values.
+
+### applyFilter()
+
+Programmatically apply a filter value.
+
+<ParamField path="field" type="string" required>
+  The filter key
+</ParamField>
+
+<ParamField path="value" type="mixed" required>
+  The value to set
+</ParamField>
+
+```php
+public function applyFilter(string $field, mixed $value): void
+
+// Usage
+public function quickFilterActive(): void
+{
+    $this->applyFilter('is_active', 1);
+}
+```
+
+### removeFilter()
+
+Remove a specific filter.
+
+<ParamField path="field" type="string" required>
+  The filter key to remove
+</ParamField>
+
+```php
+public function removeFilter(string $field): void
+```
+
+### clearFilters()
+
+Clear all active filters.
+
+```php
+public function clearFilters(): void
+
+// Usage
+public function resetTable(): void
+{
+    $this->clearFilters();
+    $this->clearSearch();
+    $this->clearSort();
+}
+```
+
+### hasActiveFilters()
+
+Check if any filters are currently applied.
+
+<ParamField path="return" type="bool">
+  True if any filters are active
+</ParamField>
+
+```php
+public function hasActiveFilters(): bool
+```
+
+### getFilterValue()
+
+Get the current value of a specific filter.
+
+<ParamField path="field" type="string" required>
+  The filter key
+</ParamField>
+
+<ParamField path="return" type="mixed">
+  The filter value or null
+</ParamField>
+
+```php
+public function getFilterValue(string $field): mixed
+```
+
+### getAppliedFilters()
+
+Get all currently applied filters as an associative array.
+
+<ParamField path="return" type="array">
+  Array of filter keys and values
+</ParamField>
+
+```php
+public function getAppliedFilters(): array
+```
+
+### getFilterByKey()
+
+Get a filter instance by its key.
+
+<ParamField path="key" type="string" required>
+  The filter key
+</ParamField>
+
+<ParamField path="return" type="FilterContract|null">
+  The filter instance or null if not found
+</ParamField>
+
+```php
+public function getFilterByKey(string $key): ?FilterContract
+```
+
+## Search Methods
+
+Manage the search functionality.
+
+### clearSearch()
+
+Clear the search input.
+
+```php
+public function clearSearch(): void
+```
+
+### hasSearch()
+
+Check if a search term is currently active.
+
+<ParamField path="return" type="bool">
+  True if search has a value
+</ParamField>
+
+```php
+public function hasSearch(): bool
+```
+
+## Sorting Methods
+
+Manage column sorting.
+
+### sortBy()
+
+Toggle sorting on a specific field.
+
+<ParamField path="field" type="string" required>
+  The field name to sort by
+</ParamField>
+
+```php
+public function sortBy(string $field): void
+
+// Sorting cycles: unsorted → asc → desc → unsorted
+```
+
+### clearSort()
+
+Clear all sorting.
+
+```php
+public function clearSort(): void
+```
+
+### clearSortField()
+
+Clear sorting on a specific field.
+
+<ParamField path="field" type="string" required>
+  The field to clear sorting from
+</ParamField>
+
+```php
+public function clearSortField(string $field): void
+```
+
+### isSortedBy()
+
+Check if a field is currently being sorted.
+
+<ParamField path="field" type="string" required>
+  The field name to check
+</ParamField>
+
+<ParamField path="return" type="bool">
+  True if the field is being sorted
+</ParamField>
+
+```php
+public function isSortedBy(string $field): bool
+```
+
+### getSortDirection()
+
+Get the sort direction for a field.
+
+<ParamField path="field" type="string" required>
+  The field name
+</ParamField>
+
+<ParamField path="return" type="string">
+  Either "asc" or "desc"
+</ParamField>
+
+```php
+public function getSortDirection(string $field): string
+```
+
+### getSortOrder()
+
+Get the sort order index for a field (for multi-column sorting).
+
+<ParamField path="field" type="string" required>
+  The field name
+</ParamField>
+
+<ParamField path="return" type="int">
+  The 1-based sort order, or 0 if not sorted
+</ParamField>
+
+```php
+public function getSortOrder(string $field): int
+```
+
+## Export Methods
+
+Export table data to CSV.
+
+### exportCsvAuto()
+
+Export the current table data to CSV (respecting filters, search, and sorting).
+
+<ParamField path="return" type="StreamedResponse">
+  A streamed CSV download response
+</ParamField>
+
+```php
+public function exportCsvAuto(): StreamedResponse
+
+// Usage in Blade
+<button wire:click="exportCsvAuto">
+    Export to CSV
+</button>
+```
+
+### setExportFilename()
+
+Set the filename for CSV exports (without extension).
+
+<ParamField path="filename" type="string" required>
+  The filename prefix (date will be appended)
+</ParamField>
+
+```php
+protected function setExportFilename(string $filename): static
+
+// Usage
+public function configure(): void
+{
+    $this->setExportFilename('users-report');
+}
+// Results in: users-report-2024-03-15.csv
+```
+
+### setExportChunkSize()
+
+Set the chunk size for CSV exports to manage memory usage.
+
+<ParamField path="size" type="int" required>
+  Number of rows to process per chunk
+</ParamField>
+
+```php
+protected function setExportChunkSize(int $size): static
+
+// Usage
+public function configure(): void
+{
+    $this->setExportChunkSize(1000); // Process 1000 rows at a time
+}
+```
+
+## State Management Methods
+
+Manage table state persistence across requests.
+
+### getTableKey()
+
+Get the unique table key used for state caching.
+
+<ParamField path="return" type="string">
+  The table key prefixed with "lwt_"
+</ParamField>
+
+```php
+public function getTableKey(): string
+```
+
+You can customize the table key by setting the `$tableKey` property:
+
+```php
+class UsersTable extends DataTableComponent
+{
+    protected string $tableKey = 'users';
+    
+    // This will use 'lwt_users' as the cache key
+}
+```
+
+### clearStateCache()
+
+Clear the cached state for this table.
+
+```php
+public function clearStateCache(): void
+
+// Usage
+public function resetTable(): void
+{
+    $this->clearStateCache();
+    $this->clearFilters();
+    $this->clearSearch();
+    $this->clearSort();
+}
+```
+
+## Theme Helper Methods
+
+Check the current theme.
+
+### theme()
+
+Get the active theme name.
+
+<ParamField path="return" type="string">
+  The theme name
+</ParamField>
+
+```php
+public function theme(): string
+```
+
+### isTailwind()
+
+Check if using Tailwind theme.
+
+```php
+public function isTailwind(): bool
+```
+
+### isBootstrap()
+
+Check if using any Bootstrap theme.
+
+```php
+public function isBootstrap(): bool
+```
+
+### isBootstrap5()
+
+Check if using Bootstrap 5 theme.
+
+```php
+public function isBootstrap5(): bool
+```
+
+### isBootstrap4()
+
+Check if using Bootstrap 4 theme.
+
+```php
+public function isBootstrap4(): bool
+```
+
+## Lifecycle Hooks
+
+Override these methods to hook into the table lifecycle.
+
+### configure()
+
+Called during component boot and mount. Use this to configure your table.
+
+```php
+public function configure(): void
+{
+    $this->setDefaultPerPage(25)
+        ->setPerPageOptions([10, 25, 50, 100])
+        ->setSearchDebounce(500)
+        ->setEmptyMessage('No records found');
+}
+```
+
+### onQuerying()
+
+Called before the query is executed. Modify the query before data is fetched.
+
+<ParamField path="query" type="Builder" required>
+  The Eloquent query builder instance
+</ParamField>
+
+```php
+protected function onQuerying(Builder $query): void
+{
+    // Add additional query constraints
+    $query->where('tenant_id', auth()->user()->tenant_id);
+}
+```
+
+### onQueried()
+
+Called after the query is executed. Modify the results before rendering.
+
+<ParamField path="rows" type="LengthAwarePaginator" required>
+  The paginated results
+</ParamField>
+
+```php
+protected function onQueried(LengthAwarePaginator $rows): void
+{
+    // Post-process results
+    Log::info('Query returned ' . $rows->total() . ' rows');
+}
+```
+
+### onRendering()
+
+Called before rendering the view. Modify the view data.
+
+<ParamField path="viewData" type="array" required>
+  Array of data being passed to the view
+</ParamField>
+
+<ParamField path="return" type="array" required>
+  Modified view data array
+</ParamField>
+
+```php
+protected function onRendering(array $viewData): array
+{
+    $viewData['customData'] = $this->getCustomData();
+    return $viewData;
+}
+```
+
+### onRendered()
+
+Called after the view is rendered.
+
+```php
+protected function onRendered(): void
+{
+    // Cleanup or logging after render
+}
+```
+
+## Event Dispatching
+
+### shouldDispatchTableEvents()
+
+Enable automatic event dispatching for table lifecycle events.
+
+<ParamField path="return" type="bool" default="false">
+  Return true to enable event dispatching
+</ParamField>
+
+```php
+protected function shouldDispatchTableEvents(): bool
+{
+    return true;
+}
+```
+
+When enabled, the following events are dispatched:
+- `table-querying` - Before query execution
+- `table-queried` - After query execution
+- `table-rendering` - Before view rendering
+- `table-rendered` - After view rendering
+
+Listen to these events in your JavaScript:
+
+```javascript
+Livewire.on('table-queried', () => {
+    console.log('Table data loaded');
+});
+```
+
+## Public Properties
+
+These properties are available for use in your Blade views.
+
+### Selection Properties
+
+```php
+public array $selectedIds = [];      // IDs of selected rows
+public array $excludedIds = [];      // IDs excluded from "select all"
+public bool $selectAllPages = false; // Whether all pages are selected
+```
+
+### Pagination Properties
+
+```php
+public int $perPage = 10; // Current per-page value
+```
+
+### Search Property
+
+```php
+public string $search = ''; // Current search term
+```
+
+### Sort Property
+
+```php
+public array $sortFields = []; // ['field' => 'asc|desc', ...]
+```
+
+### Filter Property
+
+```php
+public array $tableFilters = []; // ['filter_key' => value, ...]
+```
+
+### Column Visibility
+
+```php
+public array $hiddenColumns = []; // Array of hidden column field names
+```
+
+### Theme Properties
+
+```php
+public string $tableTheme = ''; // Current theme
+public bool $darkMode = false;  // Dark mode state
+```

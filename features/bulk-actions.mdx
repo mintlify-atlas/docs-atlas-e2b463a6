@@ -1,0 +1,248 @@
+---
+title: "Bulk Actions"
+description: "Select rows and perform operations on them using an efficient exclusion-based selection model"
+---
+
+Bulk actions let users select rows and perform operations on them. The system uses an **exclusion model** for efficient handling of large datasets.
+
+## Enabling Bulk Actions
+
+Define the `bulkActions()` method in your table component to enable bulk actions:
+
+```php
+public function bulkActions(): array
+{
+    return [
+        'deleteSelected' => 'Delete Selected',
+        'exportSelected' => 'Export to CSV',
+        'activateSelected' => 'Activate',
+    ];
+}
+```
+
+<Info>
+Each key is the method name to call, and the value is the display label shown in the dropdown.
+</Info>
+
+When `bulkActions()` returns actions, a checkbox column is automatically added to the table.
+
+## Implementing Action Methods
+
+Define a public method for each action. Use `getSelectedIds()` to retrieve the selected row IDs:
+
+```php
+public function deleteSelected(): void
+{
+    $ids = $this->getSelectedIds();
+    User::whereIn('id', $ids)->delete();
+}
+
+public function activateSelected(): void
+{
+    $ids = $this->getSelectedIds();
+    User::whereIn('id', $ids)->update(['active' => true]);
+}
+```
+
+<Note>
+After execution, `deselectAll()` is called automatically to clear the selection.
+</Note>
+
+## The Exclusion Model
+
+The package uses an intelligent selection model that efficiently handles millions of rows:
+
+<Steps>
+  <Step title="Individual Selection (default)">
+    Clicking individual checkboxes stores IDs in the `$selectedIds` array.
+  </Step>
+  
+  <Step title="Select All Pages">
+    When "Select All" is clicked across all pages:
+    - `selectAllPages` is set to `true`
+    - All rows are considered selected
+    - Unchecked rows are tracked in `$excludedIds`
+    
+    This means "all rows EXCEPT the excluded ones" — efficient even with millions of rows.
+  </Step>
+  
+  <Step title="Getting Selected IDs">
+    `getSelectedIds()` intelligently resolves IDs based on the current mode:
+    - In individual mode: returns `$selectedIds` array
+    - In exclusion mode: queries the database for all matching IDs minus `$excludedIds`
+    
+    Active search and filters are respected when resolving IDs in exclusion mode.
+  </Step>
+</Steps>
+
+### How getSelectedIds() Works
+
+Here's the implementation from `DataTableComponent.php:78`:
+
+```php
+public function getSelectedIds(): array
+{
+    if (! $this->selectAllPages) {
+        return $this->selectedIds;
+    }
+
+    $columns = $this->resolveColumns();
+    $filters = $this->filters();
+    $state = new State(search: $this->search, filters: $this->tableFilters);
+    $query = $this->query();
+    $query = (new SearchStep($columns))->apply($query, $state);
+    $query = (new FilterStep($filters))->apply($query, $state);
+
+    $keyName = $query->getModel()->getKeyName();
+    $allIds = $query->pluck($keyName)->map(fn ($id) => (string) $id)->toArray();
+
+    return array_values(array_diff($allIds, $this->excludedIds));
+}
+```
+
+<Info>
+The method uses the model's actual primary key (`getKeyName()`), so custom primary keys and UUIDs work correctly.
+</Info>
+
+## Built-in CSV Export
+
+The `HasExport` trait provides automatic CSV export from visible columns without manual mapping:
+
+```php
+public function bulkActions(): array
+{
+    return [
+        'exportCsvAuto' => 'Export CSV',
+    ];
+}
+```
+
+That's it! `exportCsvAuto()` automatically:
+- Uses visible column labels as CSV headers
+- Resolves cell values via each column's `resolveValue()` method
+- Excludes `blade`, `action`, and `image` column types
+- Respects active search, filters, and sort
+- When bulk selection is active, exports only selected rows
+- Streams the download (memory-efficient for large datasets)
+
+### Configuration
+
+Customize the export filename and chunk size in your `configure()` method:
+
+```php
+public function configure(): void
+{
+    $this->setExportFilename('users');     // Default: 'export'
+    $this->setExportChunkSize(1000);       // Default: 500
+}
+```
+
+<Note>
+The filename is suffixed with the current date: `users-2024-12-15.csv`
+</Note>
+
+## Custom Export Logic
+
+For full control over export format and content, build your own export method:
+
+```php CatalogTable.php
+use SymfonyComponentHttpFoundationStreamedResponse;
+
+public function exportCsv(): StreamedResponse
+{
+    $ids = $this->getSelectedIds();
+
+    return response()->streamDownload(function () use ($ids): void {
+        $out = fopen('php://output', 'w');
+
+        fputcsv($out, ['ID', 'SKU', 'Name', 'Category', 'Brand', 'Price', 'Stock', 'Rating', 'Country', 'Active']);
+
+        CatalogItem::whereIn('id', $ids)
+            ->orderBy('id')
+            ->chunk(500, function ($items) use ($out): void {
+                foreach ($items as $item) {
+                    fputcsv($out, [
+                        $item->id,
+                        $item->sku,
+                        $item->name,
+                        $item->category,
+                        $item->brand,
+                        number_format((float) $item->price, 2),
+                        $item->stock,
+                        $item->rating,
+                        $item->country,
+                        $item->active ? 'Yes' : 'No',
+                    ]);
+                }
+            });
+
+        fclose($out);
+    }, 'catalog-export-'.now()->format('Y-m-d').'.csv', [
+        'Content-Type' => 'text/csv',
+    ]);
+}
+```
+
+## Available Methods
+
+<CardGroup cols={2}>
+  <Card title="bulkActions()" icon="list">
+    Define available bulk actions as an associative array
+  </Card>
+  
+  <Card title="getSelectedIds()" icon="check-double">
+    Get resolved IDs (handles exclusion model automatically)
+  </Card>
+  
+  <Card title="toggleSelected($id)" icon="toggle-on">
+    Toggle selection state of a single row
+  </Card>
+  
+  <Card title="setPageSelection($ids, $select)" icon="square-check">
+    Select or deselect all rows on current page
+  </Card>
+  
+  <Card title="selectAllAcrossPages()" icon="globe">
+    Enter exclusion mode (select everything)
+  </Card>
+  
+  <Card title="deselectAll()" icon="xmark">
+    Clear all selections and exit exclusion mode
+  </Card>
+  
+  <Card title="getSelectedCount($total)" icon="calculator">
+    Get count of selected rows
+  </Card>
+  
+  <Card title="hasBulkActions()" icon="circle-question">
+    Check if any bulk actions are defined
+  </Card>
+  
+  <Card title="executeBulkAction($action)" icon="play">
+    Execute a bulk action by name (called internally)
+  </Card>
+</CardGroup>
+
+## UI Behavior
+
+<Steps>
+  <Step title="Initial State">
+    The bulk actions dropdown is disabled when no rows are selected.
+  </Step>
+  
+  <Step title="Selection Active">
+    A badge shows the count of selected rows, and the dropdown becomes active.
+  </Step>
+  
+  <Step title="Page Fully Selected">
+    A "Select all across pages" banner appears when all visible rows are selected.
+  </Step>
+  
+  <Step title="Exclusion Mode">
+    The banner shows the total selected count. Unchecking rows adds them to the exclusion list.
+  </Step>
+</Steps>
+
+<Tip>
+Active search and filters are respected when resolving IDs in exclusion mode, ensuring bulk actions only affect the filtered dataset.
+</Tip>

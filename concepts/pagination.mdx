@@ -1,0 +1,370 @@
+---
+title: 'Pagination'
+description: 'Configure pagination settings and per-page options'
+---
+
+## Overview
+
+Laravel Livewire Tables uses Laravel's built-in pagination system to handle large datasets efficiently. The component leverages Livewire's `WithPagination` trait to provide seamless, reactive pagination.
+
+## Basic Pagination
+
+Pagination is enabled by default. The component automatically paginates query results:
+
+```php
+public function query(): Builder
+{
+    return Product::query();
+}
+```
+
+The `Engine` processes the query through the pipeline and applies pagination as the final step:
+
+```php
+$rows = $engine->process($query, $state);
+// Returns Illuminate\Pagination\LengthAwarePaginator
+```
+
+## Configuration
+
+### Default Per Page
+
+Set the initial number of rows per page:
+
+```php
+public function configure(): void
+{
+    $this->setDefaultPerPage(25);
+}
+```
+
+Default: 10 rows per page.
+
+### Per Page Options
+
+Customize the available choices in the per-page dropdown:
+
+```php
+public function configure(): void
+{
+    $this->setDefaultPerPage(25);
+    $this->setPerPageOptions([10, 25, 50, 100, 250]);
+}
+```
+
+Default options: `[10, 25, 50, 100]`.
+
+<Info>
+  The per-page dropdown only shows options you define. Ensure `defaultPerPage` is included in `perPageOptions`.
+</Info>
+
+## Per Page State
+
+The component tracks the current per-page setting:
+
+```php
+public int $perPage = 10;
+```
+
+### Programmatic Access
+
+Get available options:
+
+```php
+$options = $this->getPerPageOptions();
+// [10, 25, 50, 100, 250]
+```
+
+Update per-page programmatically:
+
+```php
+$this->perPage = 50;
+```
+
+### Validation
+
+When the per-page value is updated, it's automatically validated:
+
+```php
+public function updatedPerPage(): void
+{
+    if (!in_array($this->perPage, $this->perPageOptions, true)) {
+        $this->perPage = $this->defaultPerPage;
+    }
+    $this->resetPage();
+}
+```
+
+Invalid values are reset to the default, and the user is returned to page 1.
+
+## Pagination View
+
+The pagination view is determined by the active theme:
+
+```php
+public function paginationView(): string
+{
+    return app(ThemeManager::class)->resolve()->paginationView();
+}
+```
+
+### Theme-Specific Views
+
+- **Tailwind**: `livewire-tables::pagination.tailwind`
+- **Bootstrap 5**: `livewire-tables::pagination.bootstrap-5`
+- **Bootstrap 4**: `livewire-tables::pagination.bootstrap-4`
+
+<Note>
+  The pagination view automatically matches your table's theme. No additional configuration is needed.
+</Note>
+
+## Integration with Laravel Pagination
+
+The component uses Laravel's `LengthAwarePaginator`, which provides:
+
+- Total item count
+- Current page
+- Items per page
+- First/last page links
+- Previous/next links
+- Page number links
+
+Access pagination data in views:
+
+```blade
+@if ($rows->hasPages())
+    <div class="pagination-info">
+        Showing {{ $rows->firstItem() }} to {{ $rows->lastItem() }} 
+        of {{ $rows->total() }} results
+    </div>
+@endif
+```
+
+## The Pagination Pipeline
+
+Understanding how pagination works internally:
+
+<Steps>
+  <Step title="Query Building">
+    The base query is built from `query()`.
+  </Step>
+  
+  <Step title="Pipeline Processing">
+    The `Engine` applies search, filters, and sorting.
+  </Step>
+  
+  <Step title="Pagination">
+    The final step applies pagination:
+    ```php
+    $query->paginate(
+        perPage: $state->perPage(),
+        page: $state->page(),
+    );
+    ```
+  </Step>
+  
+  <Step title="Results">
+    A `LengthAwarePaginator` is returned with the current page's results.
+  </Step>
+</Steps>
+
+## State Management
+
+Pagination state is managed by Livewire's `WithPagination` trait:
+
+```php
+use Livewire\WithPagination;
+
+trait HasPagination
+{
+    use WithPagination;
+
+    public function paginationView(): string
+    {
+        return app(ThemeManager::class)->resolve()->paginationView();
+    }
+}
+```
+
+### Reset Page
+
+The page is automatically reset to 1 when:
+- Search query changes
+- Filters are updated
+- Per-page value changes
+- Sorting changes
+
+```php
+public function updatedSearch(): void
+{
+    $this->deselectAll();
+    $this->resetPage(); // Reset to page 1
+    $this->dispatchFiltersChanged();
+}
+```
+
+Reset manually:
+
+```php
+$this->resetPage();
+```
+
+## Complete Example
+
+```php app/Livewire/ProductsTable.php
+<?php
+
+namespace App\Livewire;
+
+use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
+use Livewire\Tables\Columns\TextColumn;
+use Livewire\Tables\Columns\DateColumn;
+use Livewire\Tables\Columns\BooleanColumn;
+use Livewire\Tables\Livewire\DataTableComponent;
+
+class ProductsTable extends DataTableComponent
+{
+    protected string $tableKey = 'products';
+
+    public function configure(): void
+    {
+        // Set default rows per page
+        $this->setDefaultPerPage(25);
+        
+        // Customize available options
+        $this->setPerPageOptions([10, 25, 50, 100, 250]);
+        
+        $this->setSearchDebounce(300);
+        $this->setEmptyMessage('No products found.');
+    }
+
+    public function query(): Builder
+    {
+        return Product::query()
+            ->with(['brand', 'category']);
+    }
+
+    public function columns(): array
+    {
+        return [
+            TextColumn::make('name')
+                ->label('Product')
+                ->sortable()
+                ->searchable(),
+
+            TextColumn::make('sku')
+                ->label('SKU')
+                ->sortable()
+                ->searchable(),
+
+            TextColumn::make('price')
+                ->label('Price')
+                ->sortable()
+                ->format(fn($value) => '$' . number_format($value, 2)),
+
+            TextColumn::make('stock')
+                ->label('Stock')
+                ->sortable(),
+
+            BooleanColumn::make('active')
+                ->label('Status')
+                ->sortable(),
+
+            DateColumn::make('created_at')
+                ->label('Created')
+                ->sortable()
+                ->format('M d, Y'),
+        ];
+    }
+}
+```
+
+## Custom Pagination View
+
+If you need to customize the pagination view, publish the views:
+
+```bash
+php artisan vendor:publish --tag=livewire-tables-views
+```
+
+Then modify the published views in `resources/views/vendor/livewire-tables/pagination/`.
+
+## Performance Considerations
+
+<AccordionGroup>
+  <Accordion title="Large Datasets">
+    For very large datasets, consider:
+    - Adding database indexes on sortable/searchable columns
+    - Using cursor pagination for infinite scroll (requires custom implementation)
+    - Caching total counts for better performance
+    ```php
+    public function query(): Builder
+    {
+        return Product::query()
+            ->select('id', 'name', 'price', 'stock') // Only select needed columns
+            ->with(['brand:id,name']); // Eager load with specific columns
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Index Optimization">
+    Add compound indexes for commonly sorted columns:
+    ```php
+    Schema::table('products', function (Blueprint $table) {
+        $table->index(['active', 'created_at']);
+        $table->index(['category', 'price']);
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Limit Per Page Options">
+    Avoid very large per-page values:
+    ```php
+    // Good
+    $this->setPerPageOptions([10, 25, 50, 100]);
+    
+    // Avoid
+    $this->setPerPageOptions([10, 50, 100, 500, 1000]);
+    ```
+    Large page sizes can cause:
+    - Slow queries
+    - Memory issues
+    - Poor UX (too much scrolling)
+  </Accordion>
+</AccordionGroup>
+
+## Pagination Info
+
+Display pagination information in your view:
+
+```blade
+<div class="flex items-center justify-between px-4 py-3">
+    <div class="text-sm text-gray-700">
+        @if ($rows->total() > 0)
+            Showing 
+            <span class="font-medium">{{ $rows->firstItem() }}</span>
+            to 
+            <span class="font-medium">{{ $rows->lastItem() }}</span>
+            of 
+            <span class="font-medium">{{ $rows->total() }}</span>
+            results
+        @else
+            No results found
+        @endif
+    </div>
+    
+    {{ $rows->links() }}
+</div>
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tables" icon="table" href="/concepts/tables">
+    Learn about the DataTableComponent lifecycle
+  </Card>
+  <Card title="Bulk Actions" icon="check-double" href="/features/bulk-actions">
+    Enable bulk operations on selected rows
+  </Card>
+</CardGroup>

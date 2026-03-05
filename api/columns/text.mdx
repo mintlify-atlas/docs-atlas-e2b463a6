@@ -1,0 +1,288 @@
+---
+title: TextColumn
+description: Display text content with formatting options
+---
+
+## Overview
+
+The `TextColumn` displays text-based data from your database. It's the most common column type and includes support for sorting, searching, and custom formatting.
+
+## Creating a Text Column
+
+### Basic Usage
+
+```php
+use Livewire\Tables\Columns\TextColumn;
+
+TextColumn::make('name')
+```
+
+### Factory Method
+
+You can also create text columns using the base `Column` class:
+
+```php
+use Livewire\Tables\Columns\Column;
+
+Column::text('name')
+```
+
+### Without Field Binding
+
+Create computed columns that don't map to a database field:
+
+```php
+TextColumn::make()
+    ->label('Full Name')
+    ->render(fn($row) => $row->first_name . ' ' . $row->last_name)
+```
+
+## Common Methods
+
+All methods return the column instance for fluent chaining.
+
+<ParamField path="label" type="string">
+  Set a custom label for the column header. If not specified, the label is automatically generated from the field name.
+  
+  ```php
+  TextColumn::make('email_address')->label('Email')
+  ```
+</ParamField>
+
+<ParamField path="sortable" type="void">
+  Enable sorting on this column.
+  
+  ```php
+  TextColumn::make('name')->sortable()
+  ```
+</ParamField>
+
+<ParamField path="searchable" type="string|Closure|null">
+  Enable searching on this column. Accepts an optional field name for join columns or a custom closure for advanced search logic.
+  
+  ```php
+  // Basic searchable
+  TextColumn::make('name')->searchable()
+  
+  // Search on a joined table field
+  TextColumn::make('brand_name')->searchable('brands.name')
+  
+  // Custom search logic
+  TextColumn::make('name')->searchable(
+      fn($query, $search) => $query->orWhere('name', 'LIKE', "%{$search}%")
+  )
+  ```
+</ParamField>
+
+<ParamField path="format" type="string|Closure">
+  Format the cell value. Accepts a sprintf-style format string or a closure.
+  
+  ```php
+  // Using sprintf format
+  TextColumn::make('price')->format('$%.2f')
+  
+  // Using a closure
+  TextColumn::make('price')->format(fn($value, $row) => '$' . number_format($value, 2))
+  ```
+</ParamField>
+
+<ParamField path="render" type="Closure">
+  Completely customize the cell content. This takes precedence over `format()`. The closure receives the model instance and optionally the table component.
+  
+  ```php
+  TextColumn::make()->render(function($row) {
+      return "{$row->first_name} {$row->last_name}";
+  })
+  ```
+</ParamField>
+
+<ParamField path="width" type="string">
+  Set the column width using any CSS width value.
+  
+  ```php
+  TextColumn::make('email')->width('300px')
+  TextColumn::make('name')->width('25%')
+  ```
+</ParamField>
+
+<ParamField path="hidden" type="void">
+  Hide the column from display.
+  
+  ```php
+  TextColumn::make('internal_id')->hidden()
+  ```
+</ParamField>
+
+<ParamField path="hideIf" type="bool">
+  Conditionally hide the column based on a boolean condition.
+  
+  ```php
+  TextColumn::make('admin_notes')->hideIf(!auth()->user()->isAdmin())
+  ```
+</ParamField>
+
+<ParamField path="columnClass" type="string">
+  Apply CSS classes to both the header and cell for this column.
+  
+  ```php
+  TextColumn::make('price')->columnClass('text-right font-mono')
+  ```
+</ParamField>
+
+<ParamField path="headerClass" type="string">
+  Apply CSS classes only to the column header.
+  
+  ```php
+  TextColumn::make('price')->headerClass('text-right')
+  ```
+</ParamField>
+
+<ParamField path="cellClass" type="string">
+  Apply CSS classes only to the column cells.
+  
+  ```php
+  TextColumn::make('status')->cellClass('font-semibold')
+  ```
+</ParamField>
+
+<ParamField path="key" type="string">
+  Set a unique key for the column. Useful when using multiple columns with the same field.
+  
+  ```php
+  TextColumn::make('created_at')->key('created')->label('Created')
+  TextColumn::make('created_at')->key('created_formatted')->label('Date')->format('M d, Y')
+  ```
+</ParamField>
+
+<ParamField path="selectAs" type="string">
+  Specify a SQL alias for the select statement. Useful for computed columns or aggregates.
+  
+  ```php
+  TextColumn::make('total_orders')->selectAs('order_count')
+  ```
+</ParamField>
+
+<ParamField path="view" type="string">
+  Use a custom Blade view to render the cell.
+  
+  ```php
+  TextColumn::make('status')->view('components.status-badge')
+  ```
+</ParamField>
+
+## Examples
+
+### Basic Text Column
+
+```php
+public function columns(): array
+{
+    return [
+        TextColumn::make('name')
+            ->sortable()
+            ->searchable(),
+            
+        TextColumn::make('email')
+            ->sortable()
+            ->searchable(),
+    ];
+}
+```
+
+### Formatted Price Column
+
+```php
+TextColumn::make('price')
+    ->label('Price')
+    ->sortable()
+    ->format(fn($value) => '$' . number_format($value, 2))
+    ->columnClass('text-right font-mono')
+```
+
+### Computed Full Name Column
+
+```php
+TextColumn::make()
+    ->label('Full Name')
+    ->render(fn($row) => "{$row->first_name} {$row->last_name}")
+    ->searchable(fn($query, $search) => 
+        $query->where('first_name', 'LIKE', "%{$search}%")
+              ->orWhere('last_name', 'LIKE', "%{$search}%")
+    )
+```
+
+### Join Column with Custom Search
+
+```php
+TextColumn::make('brand.name')
+    ->label('Brand')
+    ->sortable()
+    ->searchable('brands.name')
+```
+
+### Status Badge with Styling
+
+```php
+TextColumn::make('status')
+    ->sortable()
+    ->render(function($row) {
+        $colors = [
+            'active' => 'bg-green-100 text-green-800',
+            'pending' => 'bg-yellow-100 text-yellow-800',
+            'inactive' => 'bg-gray-100 text-gray-800',
+        ];
+        
+        $class = $colors[$row->status] ?? 'bg-gray-100 text-gray-800';
+        
+        return "<span class='px-2 py-1 rounded-full text-xs {$class}'>" . 
+               ucfirst($row->status) . 
+               "</span>";
+    })
+```
+
+### Conditional Formatting
+
+```php
+TextColumn::make('balance')
+    ->label('Balance')
+    ->sortable()
+    ->format(function($value, $row) {
+        $formatted = '$' . number_format($value, 2);
+        
+        if ($value < 0) {
+            return "<span class='text-red-600'>{$formatted}</span>";
+        }
+        
+        return $formatted;
+    })
+```
+
+### Truncated Text with Tooltip
+
+```php
+TextColumn::make('description')
+    ->render(function($row) {
+        $text = $row->description;
+        $truncated = strlen($text) > 50 ? substr($text, 0, 50) . '...' : $text;
+        
+        return "<span title='{$text}'>{$truncated}</span>";
+    })
+```
+
+## Field Name Resolution
+
+When using dotted field names (for relationships), the label is automatically derived from the last segment:
+
+```php
+// Field: 'brands.name' → Label: 'Name'
+TextColumn::make('brands.name')
+
+// Field: 'orders.unit_price' → Label: 'Unit price'
+TextColumn::make('orders.unit_price')
+```
+
+The internal resolution key automatically converts dots to underscores for attribute access:
+- `brands.name` → `brands_name`
+- `orders.unit_price` → `orders_unit_price`
+
+See the [Joins documentation](/features/joins) for more information on working with related tables.

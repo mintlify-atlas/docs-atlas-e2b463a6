@@ -1,0 +1,368 @@
+---
+title: ImageColumn
+description: Display images with configurable dimensions and alt text
+---
+
+## Overview
+
+The `ImageColumn` displays images from URLs stored in your database. It supports custom dimensions, alt text from another field, and custom formatting through closures.
+
+## Creating an Image Column
+
+### Basic Usage
+
+```php
+use Livewire\Tables\Columns\ImageColumn;
+
+ImageColumn::make('avatar')
+```
+
+### Factory Method
+
+You can also create image columns using the base `Column` class:
+
+```php
+use Livewire\Tables\Columns\Column;
+
+Column::image('avatar')
+```
+
+## Image-Specific Methods
+
+<ParamField path="dimensions" type="int, int">
+  Set the width and height of the image in pixels.
+  
+  **Default:** `50x50` pixels
+  
+  ```php
+  ImageColumn::make('avatar')->dimensions(100, 100)
+  ImageColumn::make('thumbnail')->dimensions(80, 60)
+  ImageColumn::make('profile_picture')->dimensions(64, 64)
+  ```
+</ParamField>
+
+<ParamField path="alt" type="string">
+  Specify the field name to use for the image's alt text. The value will be retrieved from the row model.
+  
+  ```php
+  ImageColumn::make('avatar')->alt('name')
+  ImageColumn::make('product_image')->alt('product_name')
+  ImageColumn::make('thumbnail')->alt('title')
+  ```
+</ParamField>
+
+## Common Methods
+
+Image columns support all common column methods:
+
+<ParamField path="label" type="string">
+  Set a custom label for the column header.
+  
+  ```php
+  ImageColumn::make('avatar')->label('Photo')
+  ```
+</ParamField>
+
+<ParamField path="sortable" type="void">
+  Enable sorting on this column (sorts by the image URL).
+  
+  ```php
+  ImageColumn::make('avatar')->sortable()
+  ```
+</ParamField>
+
+<ParamField path="searchable" type="string|Closure|null">
+  Enable searching on the image URL field.
+  
+  ```php
+  ImageColumn::make('avatar')->searchable()
+  ```
+</ParamField>
+
+<ParamField path="format" type="Closure">
+  Apply custom formatting to the image URL before rendering.
+  
+  ```php
+  ImageColumn::make('avatar')->format(function($value, $row) {
+      // Add CDN prefix if not already present
+      return str_starts_with($value, 'http') 
+          ? $value 
+          : 'https://cdn.example.com/' . $value;
+  })
+  ```
+</ParamField>
+
+<ParamField path="render" type="Closure">
+  Completely customize the image HTML. This takes precedence over default rendering.
+  
+  ```php
+  ImageColumn::make('avatar')->render(function($row) {
+      return '<img src="' . $row->avatar . '" class="rounded-full" />';
+  })
+  ```
+</ParamField>
+
+<ParamField path="width" type="string">
+  Set the column width.
+  
+  ```php
+  ImageColumn::make('avatar')->width('100px')
+  ```
+</ParamField>
+
+<ParamField path="columnClass" type="string">
+  Apply CSS classes to both header and cells.
+  
+  ```php
+  ImageColumn::make('avatar')->columnClass('text-center')
+  ```
+</ParamField>
+
+<ParamField path="headerClass" type="string">
+  Apply CSS classes only to the column header.
+  
+  ```php
+  ImageColumn::make('avatar')->headerClass('text-center')
+  ```
+</ParamField>
+
+<ParamField path="cellClass" type="string">
+  Apply CSS classes only to the column cells.
+  
+  ```php
+  ImageColumn::make('avatar')->cellClass('p-2')
+  ```
+</ParamField>
+
+<ParamField path="hidden" type="void">
+  Hide the column from display.
+  
+  ```php
+  ImageColumn::make('internal_photo')->hidden()
+  ```
+</ParamField>
+
+<ParamField path="hideIf" type="bool">
+  Conditionally hide the column.
+  
+  ```php
+  ImageColumn::make('avatar')->hideIf(!auth()->user()->canViewPhotos())
+  ```
+</ParamField>
+
+## Examples
+
+### Basic Avatar Column
+
+```php
+public function columns(): array
+{
+    return [
+        ImageColumn::make('avatar')
+            ->dimensions(50, 50)
+            ->alt('name'),
+            
+        TextColumn::make('name')->sortable()->searchable(),
+        TextColumn::make('email')->sortable()->searchable(),
+    ];
+}
+```
+
+### Rounded Avatar with Centered Alignment
+
+```php
+ImageColumn::make('avatar')
+    ->label('Photo')
+    ->dimensions(64, 64)
+    ->alt('name')
+    ->columnClass('text-center')
+    ->render(function($row) {
+        return '<img src="' . $row->avatar . '" ' .
+               'alt="' . e($row->name) . '" ' .
+               'width="64" height="64" ' .
+               'class="rounded-full" />';
+    })
+```
+
+### Product Thumbnail
+
+```php
+ImageColumn::make('thumbnail')
+    ->label('Image')
+    ->dimensions(80, 60)
+    ->alt('product_name')
+    ->format(function($value, $row) {
+        // Use placeholder if no image
+        return $value ?: 'https://via.placeholder.com/80x60?text=No+Image';
+    })
+```
+
+### Image with CDN Prefix
+
+```php
+ImageColumn::make('photo')
+    ->dimensions(100, 100)
+    ->alt('title')
+    ->format(function($value, $row) {
+        if (!$value) {
+            return null;
+        }
+        
+        // Add CDN prefix if relative path
+        return str_starts_with($value, 'http') 
+            ? $value 
+            : config('app.cdn_url') . '/' . $value;
+    })
+```
+
+### Clickable Image (Link to Full Size)
+
+```php
+ImageColumn::make('image_url')
+    ->label('Preview')
+    ->dimensions(60, 60)
+    ->render(function($row) {
+        if (!$row->image_url) {
+            return '<span class="text-gray-400 text-sm">No image</span>';
+        }
+        
+        return '<a href="' . $row->image_url . '" target="_blank">' .
+               '<img src="' . $row->image_url . '" ' .
+               'width="60" height="60" ' .
+               'class="hover:opacity-75 transition" />' .
+               '</a>';
+    })
+```
+
+### Image with Fallback
+
+```php
+ImageColumn::make('avatar')
+    ->label('Avatar')
+    ->dimensions(50, 50)
+    ->render(function($row) {
+        $url = $row->avatar ?: 'https://ui-avatars.com/api/?name=' . urlencode($row->name) . '&size=50';
+        
+        return '<img src="' . $url . '" ' .
+               'alt="' . e($row->name) . '" ' .
+               'width="50" height="50" ' .
+               'class="rounded-full" />';
+    })
+```
+
+### Image with Lightbox
+
+```php
+ImageColumn::make('gallery_image')
+    ->label('Image')
+    ->dimensions(100, 100)
+    ->render(function($row) {
+        return '<a href="' . $row->gallery_image . '" ' .
+               'data-lightbox="gallery" ' .
+               'data-title="' . e($row->title) . '">' .
+               '<img src="' . $row->gallery_image . '" ' .
+               'width="100" height="100" ' .
+               'class="object-cover rounded" />' .
+               '</a>';
+    })
+```
+
+### Multiple Images in One Cell
+
+```php
+ImageColumn::make('images')
+    ->label('Gallery')
+    ->render(function($row) {
+        $images = json_decode($row->images, true) ?: [];
+        
+        if (empty($images)) {
+            return '<span class="text-gray-400 text-sm">No images</span>';
+        }
+        
+        $html = '<div class="flex gap-1">';
+        foreach (array_slice($images, 0, 3) as $image) {
+            $html .= '<img src="' . $image . '" width="40" height="40" class="rounded" />';
+        }
+        
+        if (count($images) > 3) {
+            $html .= '<span class="text-xs text-gray-500 self-center">+' . (count($images) - 3) . '</span>';
+        }
+        
+        $html .= '</div>';
+        
+        return $html;
+    })
+```
+
+### Responsive Image Column
+
+```php
+ImageColumn::make('banner')
+    ->label('Banner')
+    ->dimensions(200, 100)
+    ->render(function($row) {
+        return '<img src="' . $row->banner . '" ' .
+               'srcset="' . $row->banner . ' 1x, ' . $row->banner_2x . ' 2x" ' .
+               'alt="' . e($row->title) . '" ' .
+               'width="200" height="100" ' .
+               'class="object-cover rounded" />';
+    })
+```
+
+### Image with Badge Overlay
+
+```php
+ImageColumn::make('avatar')
+    ->dimensions(50, 50)
+    ->render(function($row) {
+        $html = '<div class="relative inline-block">';
+        $html .= '<img src="' . $row->avatar . '" width="50" height="50" class="rounded-full" />';
+        
+        if ($row->is_online) {
+            $html .= '<span class="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-400 ring-2 ring-white"></span>';
+        }
+        
+        $html .= '</div>';
+        
+        return $html;
+    })
+```
+
+## Resolution
+
+The `ImageColumn` uses standard value resolution:
+
+```php
+// Source code from ImageColumn.php:57-66
+public function resolveValue(Model $row): mixed
+{
+    $value = data_get($row, $this->resolutionKey());
+
+    if ($this->formatCallback !== null) {
+        return ($this->formatCallback)($value, $row);
+    }
+
+    return $value;
+}
+```
+
+The default rendering is handled by the table component's view, which uses the dimensions and alt field settings:
+
+```blade
+<img src="{{ $value }}" 
+     width="{{ $column->getImageWidth() }}" 
+     height="{{ $column->getImageHeight() }}" 
+     alt="{{ data_get($row, $column->getAltField()) }}" />
+```
+
+## Public Getters
+
+The following methods are available to access image configuration:
+
+- `getImageWidth(): int` - Returns the configured width (default: 50)
+- `getImageHeight(): int` - Returns the configured height (default: 50)
+- `getAltField(): string` - Returns the field name for alt text (default: empty string)
+
+## Type
+
+The column type identifier for `ImageColumn` is `'image'`.

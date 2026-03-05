@@ -1,0 +1,402 @@
+---
+title: 'Tables'
+description: 'Understanding the DataTableComponent base class and table lifecycle'
+---
+
+## Overview
+
+Laravel Livewire Tables provides a powerful `DataTableComponent` base class that you extend to create interactive, real-time data tables. The component handles pagination, sorting, searching, filtering, and bulk actions out of the box.
+
+## Creating a Table Component
+
+Every table extends `DataTableComponent` and must implement the `query()` method:
+
+```php app/Livewire/ProductsTable.php
+<?php
+
+namespace App\Livewire;
+
+use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
+use Livewire\Tables\Columns\TextColumn;
+use Livewire\Tables\Columns\DateColumn;
+use Livewire\Tables\Livewire\DataTableComponent;
+
+class ProductsTable extends DataTableComponent
+{
+    public function query(): Builder
+    {
+        return Product::query();
+    }
+
+    public function columns(): array
+    {
+        return [
+            TextColumn::make('name')->sortable()->searchable(),
+            TextColumn::make('price')->sortable(),
+            DateColumn::make('created_at')->sortable(),
+        ];
+    }
+}
+```
+
+<Note>
+  The `query()` method must return an Eloquent `Builder` instance. This is the foundation for all table operations.
+</Note>
+
+## The Configure Method
+
+Use `configure()` to customize table behavior. This method runs after the component boots:
+
+```php
+public function configure(): void
+{
+    $this->setDefaultPerPage(25);
+    $this->setPerPageOptions([10, 25, 50, 100]);
+    $this->setSearchDebounce(500);
+    $this->setDefaultSortDirection('desc');
+    $this->setEmptyMessage('No products found.');
+}
+```
+
+### Configuration Methods
+
+<AccordionGroup>
+  <Accordion title="Pagination">
+    ```php
+    $this->setDefaultPerPage(25);
+    $this->setPerPageOptions([10, 25, 50, 100, 250]);
+    ```
+    Controls the initial rows per page and available options in the dropdown.
+  </Accordion>
+
+  <Accordion title="Search">
+    ```php
+    $this->setSearchDebounce(500);
+    ```
+    Sets the delay (in milliseconds) before search executes. Range: 0-5000ms.
+  </Accordion>
+
+  <Accordion title="Sorting">
+    ```php
+    $this->setDefaultSortDirection('desc');
+    ```
+    Sets the initial sort direction when a column is first sorted. Options: `'asc'` or `'desc'`.
+  </Accordion>
+
+  <Accordion title="Empty State">
+    ```php
+    $this->setEmptyMessage('No records found matching your criteria.');
+    ```
+    Customizes the message shown when no results are found.
+  </Accordion>
+
+  <Accordion title="Styling">
+    ```php
+    $this->setHeadClass('bg-gray-50 text-gray-700');
+    $this->setBodyClass('divide-y divide-gray-200');
+    $this->setRowClass(fn($row) => $row->stock < 5 ? 'bg-red-50' : '');
+    ```
+    Apply custom CSS classes to table elements. `setRowClass()` accepts a closure for per-row styling.
+  </Accordion>
+</AccordionGroup>
+
+## The Query Method
+
+The `query()` method returns the base Eloquent Builder that powers your table:
+
+```php
+public function query(): Builder
+{
+    return Product::query();
+}
+```
+
+### Eager Loading
+
+Optimize N+1 queries with `with()`:
+
+```php
+public function query(): Builder
+{
+    return Product::query()
+        ->with(['brand', 'category']);
+}
+```
+
+### Scoping
+
+Apply global constraints:
+
+```php
+public function query(): Builder
+{
+    return Product::query()
+        ->where('active', true)
+        ->where('stock', '>', 0);
+}
+```
+
+### Joins
+
+Join related tables for searching and sorting on joined columns:
+
+```php
+public function query(): Builder
+{
+    return Order::query()
+        ->join('brands', 'orders.brand_id', '=', 'brands.id')
+        ->select(
+            'orders.*',
+            'brands.name as brands_name',
+            'brands.country as brands_country'
+        );
+}
+```
+
+<Warning>
+  When using joins, always select `table.*` to avoid column name conflicts. Use aliases for joined columns.
+</Warning>
+
+## Component Lifecycle
+
+Understanding the execution order helps you hook into the right points:
+
+<Steps>
+  <Step title="mount()">
+    Component initialization. Sets default values and loads cached state.
+  </Step>
+  
+  <Step title="boot()">
+    Runs on every request. Loads theme and calls `configure()`.
+  </Step>
+  
+  <Step title="configure()">
+    Your customization point for table options.
+  </Step>
+  
+  <Step title="build()">
+    Optional hook for custom initialization logic.
+  </Step>
+  
+  <Step title="query()">
+    Returns the base Eloquent Builder.
+  </Step>
+  
+  <Step title="columns()">
+    Defines columns (cached after first call).
+  </Step>
+  
+  <Step title="filters()">
+    Defines filters.
+  </Step>
+  
+  <Step title="Engine::process()">
+    Applies search, filters, sorting, and pagination.
+  </Step>
+  
+  <Step title="render()">
+    Renders the table view.
+  </Step>
+</Steps>
+
+### Lifecycle Hooks
+
+The component provides event hooks you can override:
+
+```php
+public function onQuerying(Builder $query): void
+{
+    // Before the engine processes the query
+    Log::info('Query starting', ['sql' => $query->toSql()]);
+}
+
+public function onQueried($rows): void
+{
+    // After the engine returns paginated results
+    Log::info('Query completed', ['count' => $rows->total()]);
+}
+
+public function onRendering(array $viewData): array
+{
+    // Before render, modify view data
+    $viewData['customData'] = 'value';
+    return $viewData;
+}
+
+public function onRendered(): void
+{
+    // After render completes
+}
+```
+
+## The Build Method
+
+Use `build()` for custom initialization that runs after configuration:
+
+```php
+public function build(): void
+{
+    // Initialize component properties
+    $this->someProperty = 'value';
+    
+    // Dispatch events
+    $this->dispatch('table-ready');
+}
+```
+
+## The Engine
+
+The `Engine` class orchestrates query processing through a pipeline of steps:
+
+```php
+$engine = new Engine(
+    columns: $columns,
+    filters: $filters,
+);
+
+$engine->addStep(new SearchStep($columns))
+    ->addStep(new FilterStep($filters))
+    ->addStep(new SortStep($columns));
+
+$rows = $engine->process($query, $state);
+```
+
+Each step receives the query builder and current state, applies transformations, and passes the modified query to the next step. This pipeline architecture ensures:
+
+- **Search**: Applied to all searchable columns
+- **Filters**: Applied based on active filter values
+- **Sorting**: Applied in the order columns were clicked
+- **Pagination**: Applied last to return paginated results
+
+<Info>
+  The engine automatically handles search, filter, and sort state from the component. You rarely need to interact with it directly.
+</Info>
+
+## Table Key
+
+Set a unique identifier for your table:
+
+```php
+protected string $tableKey = 'products';
+```
+
+This is used for:
+- Event targeting (e.g., `products-refresh`)
+- State caching differentiation
+- Multiple tables on one page
+
+## State Management
+
+The component automatically manages state for:
+
+- Search query (`$search`)
+- Sort fields and directions (`$sortFields`)
+- Active filters (`$tableFilters`)
+- Per-page setting (`$perPage`)
+- Current page
+- Selected rows (bulk actions)
+- Hidden columns
+
+State persists across Livewire requests and can be cached using the `HasStateCache` trait.
+
+## Using the Table
+
+Render your table component in any Blade view:
+
+```blade
+<livewire:products-table />
+```
+
+With props:
+
+```blade
+<livewire:products-table :darkMode="true" />
+```
+
+## Complete Example
+
+```php app/Livewire/OrdersTable.php
+<?php
+
+namespace App\Livewire;
+
+use App\Models\Order;
+use Illuminate\Database\Eloquent\Builder;
+use Livewire\Tables\Columns\TextColumn;
+use Livewire\Tables\Columns\DateColumn;
+use Livewire\Tables\Filters\SelectFilter;
+use Livewire\Tables\Filters\DateRangeFilter;
+use Livewire\Tables\Livewire\DataTableComponent;
+
+class OrdersTable extends DataTableComponent
+{
+    protected string $tableKey = 'orders';
+
+    public function configure(): void
+    {
+        $this->setDefaultPerPage(25);
+        $this->setSearchDebounce(300);
+        $this->setEmptyMessage('No orders found.');
+        $this->setRowClass(fn($row) => match($row->status) {
+            'cancelled' => 'bg-red-50',
+            'delivered' => 'bg-green-50',
+            default => '',
+        });
+    }
+
+    public function query(): Builder
+    {
+        return Order::query()
+            ->with(['customer', 'product'])
+            ->join('brands', 'orders.brand_id', '=', 'brands.id')
+            ->select('orders.*', 'brands.name as brands_name');
+    }
+
+    public function columns(): array
+    {
+        return [
+            TextColumn::make('id')->label('#')->sortable(),
+            TextColumn::make('customer_name')->sortable()->searchable(),
+            TextColumn::make('product_name')->sortable()->searchable(),
+            TextColumn::make('brands.name')->label('Brand')->sortable(),
+            TextColumn::make('status')->sortable(),
+            DateColumn::make('ordered_at')->label('Date')->sortable(),
+        ];
+    }
+
+    public function filters(): array
+    {
+        return [
+            SelectFilter::make('status')
+                ->label('Status')
+                ->setOptions([
+                    '' => 'All',
+                    'pending' => 'Pending',
+                    'shipped' => 'Shipped',
+                    'delivered' => 'Delivered',
+                ]),
+
+            DateRangeFilter::make('ordered_at')
+                ->label('Order Date Range'),
+        ];
+    }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Columns" icon="table-columns" href="/concepts/columns">
+    Learn about column types and customization
+  </Card>
+  <Card title="Filters" icon="filter" href="/concepts/filters">
+    Add filters to narrow down your data
+  </Card>
+  <Card title="Sorting & Search" icon="magnifying-glass" href="/concepts/sorting-search">
+    Configure search and multi-column sorting
+  </Card>
+  <Card title="Pagination" icon="list-ol" href="/concepts/pagination">
+    Customize pagination behavior
+  </Card>
+</CardGroup>

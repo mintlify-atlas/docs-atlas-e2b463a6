@@ -1,0 +1,390 @@
+---
+title: Dark Mode
+description: Enable and configure dark mode support for data tables
+---
+
+Laravel Livewire Tables includes built-in dark mode support that works seamlessly with both Tailwind CSS and Bootstrap themes.
+
+## Configuration
+
+Dark mode is configured in `config/livewire-tables.php` under the `dark_mode` key:
+
+```php
+'dark_mode' => [
+    'enabled' => false,
+    'selector' => '.lt-dark',
+    'colors' => [
+        'bg' => '#0f172a',
+        'bg-card' => '#1e293b',
+        'bg-subtle' => '#334155',
+        'border' => '#334155',
+        'text' => '#f1f5f9',
+        'text-muted' => '#94a3b8',
+    ],
+],
+```
+
+<Info>
+  Dark mode CSS is only injected when `enabled` is set to `true`. This keeps your stylesheet minimal when dark mode isn't needed.
+</Info>
+
+## Enabling Dark Mode
+
+Set `enabled` to `true` in your configuration:
+
+```php
+'dark_mode' => [
+    'enabled' => true,
+    // ... other options
+],
+```
+
+When enabled, the package automatically injects CSS that styles all table elements for dark backgrounds whenever the configured selector is present on a parent element.
+
+## Selector Options
+
+The `selector` determines which CSS class or attribute activates dark mode. Choose the selector that matches your framework:
+
+<Tabs>
+  <Tab title="Tailwind CSS">
+    ```php
+    'selector' => '.dark',
+    ```
+    
+    This is Tailwind's default dark mode class. Configure Tailwind to use class-based dark mode:
+    
+    ```js tailwind.config.js
+    module.exports = {
+      darkMode: 'class',
+      // ...
+    }
+    ```
+    
+    Toggle dark mode by adding/removing the `dark` class on `<html>` or `<body>`:
+    
+    ```html
+    <html class="dark">
+      <!-- All tables inside will use dark mode -->
+    </html>
+    ```
+  </Tab>
+  
+  <Tab title="Bootstrap 5.3+">
+    ```php
+    'selector' => '[data-bs-theme="dark"]',
+    ```
+    
+    Bootstrap 5.3+ uses the `data-bs-theme` attribute for color mode switching:
+    
+    ```html
+    <html data-bs-theme="dark">
+      <!-- All tables inside will use dark mode -->
+    </html>
+    ```
+    
+    Or toggle it with JavaScript:
+    
+    ```js
+    document.documentElement.setAttribute('data-bs-theme', 'dark');
+    ```
+  </Tab>
+  
+  <Tab title="Custom Selector">
+    ```php
+    'selector' => '.lt-dark',
+    // Or any other selector:
+    // 'selector' => 'body.dark-mode',
+    // 'selector' => '[data-theme="dark"]',
+    ```
+    
+    Use any valid CSS selector. Common patterns:
+    
+    - `.lt-dark` — Package-specific class (default)
+    - `body.dark-mode` — Body-level class
+    - `[data-theme="dark"]` — Data attribute
+    - `#app.dark` — Scoped to app container
+  </Tab>
+</Tabs>
+
+<Warning>
+  The selector must be present on an ancestor element of the table. Adding it directly to the table component won't work.
+</Warning>
+
+## Color Palette
+
+The `colors` array defines the color scheme used in dark mode:
+
+```php
+'colors' => [
+    'bg'         => '#0f172a',  // Page / outer background
+    'bg-card'    => '#1e293b',  // Card / panel / table container background
+    'bg-subtle'  => '#334155',  // Subtle backgrounds (thead, stripes, hover)
+    'border'     => '#334155',  // Borders and dividers
+    'text'       => '#f1f5f9',  // Primary text color
+    'text-muted' => '#94a3b8',  // Secondary / muted text color
+],
+```
+
+### Color Presets
+
+The package includes three dark mode color presets:
+
+<Tabs>
+  <Tab title="Slate (Default)">
+    ```php
+    'colors' => [
+        'bg'         => '#0f172a',
+        'bg-card'    => '#1e293b',
+        'bg-subtle'  => '#334155',
+        'border'     => '#334155',
+        'text'       => '#f1f5f9',
+        'text-muted' => '#94a3b8',
+    ],
+    ```
+    
+    Cool blue-gray tones that pair well with most primary colors.
+  </Tab>
+  
+  <Tab title="Zinc">
+    ```php
+    'colors' => [
+        'bg'         => '#18181b',
+        'bg-card'    => '#27272a',
+        'bg-subtle'  => '#3f3f46',
+        'border'     => '#3f3f46',
+        'text'       => '#fafafa',
+        'text-muted' => '#a1a1aa',
+    ],
+    ```
+    
+    True neutral grays without color tint.
+  </Tab>
+  
+  <Tab title="Neutral">
+    ```php
+    'colors' => [
+        'bg'         => '#171717',
+        'bg-card'    => '#262626',
+        'bg-subtle'  => '#404040',
+        'border'     => '#404040',
+        'text'       => '#fafafa',
+        'text-muted' => '#a3a3a3',
+    ],
+    ```
+    
+    Warm neutral grays, slightly darker than Zinc.
+  </Tab>
+</Tabs>
+
+<Tip>
+  You can mix and match colors from different presets or use completely custom hex values.
+</Tip>
+
+## How It Works
+
+When dark mode is enabled, the package generates CSS that:
+
+1. **Overrides CSS Custom Properties** — Updates `--lt-bg`, `--lt-border`, `--lt-text`, etc.
+2. **Targets Framework Classes** — Overrides Tailwind utilities (`bg-white`, `text-gray-700`) and Bootstrap classes (`card`, `table`, `form-control`)
+3. **Maintains Primary Color** — Your configured primary color (teal, indigo, etc.) remains unchanged
+4. **Works with Both Themes** — Same dark mode configuration works for Tailwind and Bootstrap
+
+### Generated CSS Structure
+
+```css
+/* CSS custom property overrides */
+.dark {
+  --lt-bg: #0f172a;
+  --lt-bg-card: #1e293b;
+  --lt-bg-subtle: #334155;
+  /* ... */
+}
+
+/* Framework-specific overrides */
+.dark .table { background: var(--lt-bg-card); }
+.dark .bg-white { background: var(--lt-bg-card) !important; }
+.dark .text-gray-700 { color: #e2e8f0 !important; }
+/* ... 100+ more rules */
+```
+
+Source: `resources/views/components/styles.blade.php:107-239`
+
+## Reactive Toggle Example
+
+Here's a complete example of implementing a dark mode toggle with Alpine.js:
+
+<CodeGroup>
+
+```blade Layout Template
+<!DOCTYPE html>
+<html x-data="{ darkMode: false }" x-bind:class="{ 'dark': darkMode }">
+<head>
+    <meta charset="UTF-8">
+    <title>My App</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body>
+    <!-- Dark mode toggle button -->
+    <button 
+        @click="darkMode = !darkMode"
+        class="fixed top-4 right-4 p-2 rounded-lg border"
+    >
+        <span x-show="!darkMode">🌙 Dark</span>
+        <span x-show="darkMode">☀️ Light</span>
+    </button>
+    
+    <!-- Your table component -->
+    <livewire:users-table />
+</body>
+</html>
+```
+
+```blade With LocalStorage Persistence
+<!DOCTYPE html>
+<html 
+    x-data="{
+        darkMode: localStorage.getItem('darkMode') === 'true',
+        toggleDarkMode() {
+            this.darkMode = !this.darkMode;
+            localStorage.setItem('darkMode', this.darkMode);
+        }
+    }" 
+    x-bind:class="{ 'dark': darkMode }"
+    x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val))"
+>
+<head>
+    <meta charset="UTF-8">
+    <title>My App</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body>
+    <button 
+        @click="toggleDarkMode()"
+        class="fixed top-4 right-4 p-2 rounded-lg border"
+    >
+        <span x-show="!darkMode">🌙 Dark</span>
+        <span x-show="darkMode">☀️ Light</span>
+    </button>
+    
+    <livewire:users-table />
+</body>
+</html>
+```
+
+```php Configuration
+// config/livewire-tables.php
+'dark_mode' => [
+    'enabled' => true,
+    'selector' => '.dark',  // Matches Alpine's x-bind:class="{ 'dark': darkMode }"
+    'colors' => [
+        'bg' => '#0f172a',
+        'bg-card' => '#1e293b',
+        'bg-subtle' => '#334155',
+        'border' => '#334155',
+        'text' => '#f1f5f9',
+        'text-muted' => '#94a3b8',
+    ],
+],
+```
+
+</CodeGroup>
+
+## Bootstrap-Specific Variables
+
+When dark mode is enabled, the package also sets Bootstrap 5.3's native CSS variables:
+
+```css
+.dark {
+    --bs-body-bg: #0f172a;
+    --bs-body-color: #f1f5f9;
+    --bs-border-color: #334155;
+    --bs-card-bg: #1e293b;
+    --bs-table-color: #f1f5f9;
+    --bs-table-hover-bg: rgba(255,255,255,.04);
+    /* ... more Bootstrap variables */
+}
+```
+
+This ensures Bootstrap components throughout your application (not just tables) use consistent dark mode styling.
+
+## Third-Party Component Support
+
+Dark mode styling includes overrides for commonly used components:
+
+### Flatpickr Date Pickers
+
+```css
+.dark .flatpickr-calendar { 
+    background: var(--lt-bg-card); 
+    border-color: var(--lt-border); 
+}
+.dark .flatpickr-day { 
+    color: var(--lt-text); 
+}
+```
+
+Date pickers used in date filters automatically adapt to dark mode.
+
+### Form Controls
+
+```css
+.dark .form-control,
+.dark .form-select { 
+    background: var(--lt-bg-card); 
+    color: var(--lt-text); 
+    border-color: var(--lt-border); 
+}
+```
+
+All filter inputs, selects, and search boxes are styled for dark backgrounds.
+
+## Custom CSS Overrides
+
+If you need to override dark mode styles, use high specificity:
+
+```css
+/* In your app.css */
+.dark .table td {
+    color: #custom-color !important;
+}
+
+.dark .lt-bg-50 {
+    background-color: rgba(99, 102, 241, 0.1) !important;
+}
+```
+
+<Warning>
+  Most dark mode CSS rules use `!important` to ensure they override framework defaults. Your overrides may also need `!important`.
+</Warning>
+
+## Troubleshooting
+
+### Dark mode not activating
+
+1. **Check `enabled` is `true`** in `config/livewire-tables.php`
+2. **Clear config cache**: `php artisan config:clear`
+3. **Verify selector** matches your HTML structure
+4. **Inspect element** to confirm the selector class is present on an ancestor
+
+### Colors look wrong
+
+1. **Check color values** are valid hex codes (e.g., `#1e293b` not `1e293b`)
+2. **Try a preset** (Slate, Zinc, or Neutral) to verify the issue
+3. **Inspect CSS variables** in browser DevTools under `:root` or your selector
+
+### Bootstrap tables not dark
+
+1. **Ensure you're using Bootstrap 5** — Dark mode has better support
+2. **Remove theme overrides** that might conflict (e.g., `bg-light` classes on cards)
+3. **Check for inline styles** that override the dark mode CSS
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Customization" icon="palette" href="/theming/customization">
+    Customize the primary color palette and CSS custom properties
+  </Card>
+  <Card title="Themes" icon="swatchbook" href="/theming/themes">
+    Learn about theme architecture and create custom themes
+  </Card>
+</CardGroup>
